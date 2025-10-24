@@ -112,6 +112,8 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-color: rgba(100, 116, 139, 0) transparent;
     transition: scrollbar-color 0.3s ease;
+    touch-action: pan-y;
+
   }
 
   .scrollbar-visible {

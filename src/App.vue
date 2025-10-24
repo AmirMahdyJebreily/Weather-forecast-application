@@ -20,6 +20,6 @@ import BackButton from './components/back-button.vue'
   @apply w-full pb-4 pt-2 flex items-center justify-between flex-none;
 }
 .app-container {
-  @apply w-full h-dvh px-4 py-2 overflow-hidden flex flex-col items-center justify-start bg-gradient-to-t from-slate-200 via-slate-100 to-slate-200 font-vazir gap-1;
+  @apply w-full h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gradient-to-t from-slate-200 via-slate-100 to-slate-200 font-vazir gap-1;
 }
 </style>
