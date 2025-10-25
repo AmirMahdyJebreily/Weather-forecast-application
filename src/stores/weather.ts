@@ -132,6 +132,36 @@ type CacheEntry = {
   ttl: number
 }
 
+/* ================= Simple / UI-friendly Open-Meteo format + helpers ================= */
+
+/** یک نقطهٔ ساعتی ساده‌شده */
+export type SimpleHourlyPoint = {
+  time: string
+  timeParsed?: Date
+  values: Partial<Record<HourlyParam, number | null>>
+}
+
+/** یک نقطهٔ روزانه ساده‌شده */
+export type SimpleDailyPoint = {
+  time: string
+  timeParsed?: Date
+  values: Partial<Record<DailyParam, number | string | null>>
+}
+
+/** فرمت ساده برای استفادهٔ مستقیم در UI */
+export type SimpleForecast = {
+  latitude: number
+  longitude: number
+  timezone?: string
+  generationtime_ms?: number
+  hourlyUnits?: HourlyUnits
+  dailyUnits?: DailyUnits
+  current?: CurrentWeather | null
+  hourly: SimpleHourlyPoint[]
+  daily: SimpleDailyPoint[]
+  raw?: ForecastResponse
+}
+
 /* ================= Constants & Helpers ================= */
 
 const GEOCODING_BASE = 'https://geocoding-api.open-meteo.com/v1/search'
@@ -207,7 +237,119 @@ async function idbGetAll<T = unknown>(storeName: string): Promise<T[]> {
   })
 }
 
-/* ===== Store implementation ===== */
+/* ===== helpers: convert ForecastResponse -> SimpleForecast & accessors ===== */
+
+/** تبدیل ForecastResponse -> SimpleForecast */
+export function forecastToSimple(f: ForecastResponse): SimpleForecast {
+  const hourlyBlock: HourlyBlock = f.hourly ?? { time: [] }
+  const dailyBlock: DailyBlock = f.daily ?? { time: [] }
+
+  const hourlyParams = (Object.keys(hourlyBlock) as (keyof HourlyBlock)[]).filter((k) => k !== 'time') as HourlyParam[]
+  const dailyParams = (Object.keys(dailyBlock) as (keyof DailyBlock)[]).filter((k) => k !== 'time') as DailyParam[]
+
+  const hourly: SimpleHourlyPoint[] = (hourlyBlock.time ?? []).map((t, i) => {
+    const values: Partial<Record<HourlyParam, number | null>> = {}
+    for (const p of hourlyParams) {
+      const arr = hourlyBlock[p]
+      const v = Array.isArray(arr) ? arr[i] : undefined
+      values[p] = typeof v === 'number' ? v : (v == null ? null : Number(v))
+    }
+    return { time: t, timeParsed: new Date(t), values }
+  })
+
+  const daily: SimpleDailyPoint[] = (dailyBlock.time ?? []).map((t, i) => {
+    const values: Partial<Record<DailyParam, number | string | null>> = {}
+    for (const p of dailyParams) {
+      const arr = dailyBlock[p]
+      const v = Array.isArray(arr) ? arr[i] : undefined
+      values[p] = v == null ? null : v
+    }
+    return { time: t, timeParsed: new Date(t), values }
+  })
+
+  return {
+    latitude: f.latitude,
+    longitude: f.longitude,
+    timezone: f.timezone,
+    generationtime_ms: f.generationtime_ms,
+    hourlyUnits: f.hourly_units,
+    dailyUnits: f.daily_units,
+    current: f.current_weather ?? null,
+    hourly,
+    daily,
+    raw: f
+  }
+}
+
+/**
+ * گرفتن مقدار ساعتی از SimpleForecast
+ * param: پارامتر (مثلاً 'temperature_2m')
+ * target: تاریخ هدف
+ * interpolate: اگر true شود بین دو نمونه خطی اینترپول می‌شود
+ */
+export function getHourlyValueFromSimple(
+  simple: SimpleForecast,
+  param: HourlyParam,
+  target: Date,
+  interpolate = false
+): number | null {
+  const arr = simple.hourly
+  if (!arr || arr.length === 0) return null
+
+  for (const p of arr) if (!p.timeParsed) p.timeParsed = new Date(p.time)
+
+  let bestIdx = 0
+  let bestDiff = Math.abs(arr[0]!.timeParsed!.getTime() - target.getTime())
+  for (let i = 1; i < arr.length; i++) {
+    const d = Math.abs(arr[i]!.timeParsed!.getTime() - target.getTime())
+    if (d < bestDiff) {
+      bestDiff = d
+      bestIdx = i
+    }
+  }
+
+  const valAtBest = arr[bestIdx]!.values[param] ?? null
+  if (!interpolate) return (typeof valAtBest === 'number' ? valAtBest : null)
+
+  if (arr[bestIdx]!.timeParsed!.getTime() === target.getTime()) {
+    return (typeof valAtBest === 'number' ? valAtBest : null)
+  }
+
+  let left = bestIdx,
+    right = bestIdx
+  if (arr[bestIdx]!.timeParsed!.getTime() < target.getTime()) {
+    left = bestIdx
+    right = Math.min(bestIdx + 1, arr.length - 1)
+  } else {
+    right = bestIdx
+    left = Math.max(bestIdx - 1, 0)
+  }
+
+  const tL = arr[left]!.timeParsed!.getTime()
+  const tR = arr[right]!.timeParsed!.getTime()
+  const vL = arr[left]!.values[param]
+  const vR = arr[right]!.values[param]
+
+  if (!Number.isFinite(vL as number) || !Number.isFinite(vR as number) || tR === tL) {
+    return (typeof valAtBest === 'number' ? valAtBest : null)
+  }
+
+  const frac = (target.getTime() - tL) / (tR - tL)
+  return (vL as number) + ((vR as number) - (vL as number)) * frac
+}
+
+/** کمکی: اگر یک ForecastResponse دارید و می‌خواهید سریع مقدار دما را بگیرید */
+export function temperatureAt(
+  fr: ForecastResponse,
+  paramDate: Date,
+  param: HourlyParam = 'temperature_2m',
+  interpolate = true
+): number | null {
+  const simple = forecastToSimple(fr)
+  return getHourlyValueFromSimple(simple, param, paramDate, interpolate)
+}
+
+/* ================= Store implementation ======== */
 
 export const useWeatherStore = defineStore('weather', () => {
   /* state */
@@ -475,7 +617,7 @@ export const useWeatherStore = defineStore('weather', () => {
           timezone: json.timezone ?? city.timezone,
           hourly: json.hourly,
           daily: json.daily,
-          current: (json.current_weather as CurrentWeather) ?? null,
+          current: json.current_weather ?? null,
           raw: json
         }
 
@@ -490,6 +632,109 @@ export const useWeatherStore = defineStore('weather', () => {
     inFlightRequests.set(key, promise)
     return promise
   }
+
+  async function getSimpleForecastForCity(city: City, opts?: { force?: boolean; ttl?: number }): Promise<SimpleForecast | null> {
+    const key = cacheKeyFor(city)
+    // try memory first
+    const existing = cache.get(key)
+    if (!opts?.force && existing && now() - existing.data.fetchedAt < existing.ttl && existing.data.raw) {
+      return forecastToSimple(existing.data.raw)
+    }
+
+    // try IDB fallback
+    if (!existing) {
+      try {
+        const e = await idbGet<CacheEntry>('cache', key)
+        if (e && now() - e.data.fetchedAt < e.ttl && e.data.raw) {
+          cache.set(key, e)
+          return forecastToSimple(e.data.raw)
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // fetch fresh
+    try {
+      const w = await getWeatherForCity(city, opts)
+      if (w.raw) return forecastToSimple(w.raw)
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  /** گرفتن قطعات تاریخ (سال،ماه،روز،ساعت) در یک timezone مشخص */
+  function getYMDH(date: Date, timeZone?: string) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timeZone ?? 'UTC',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      hour12: false
+    }).formatToParts(date)
+
+    let year = 0
+    let month = 0
+    let day = 0
+    let hour = 0
+
+    for (const p of parts) {
+      if (p.type === 'year') year = Number(p.value)
+      else if (p.type === 'month') month = Number(p.value) - 1
+      else if (p.type === 'day') day = Number(p.value)
+      else if (p.type === 'hour') hour = Number(p.value)
+    }
+
+    return { year, month, day, hour }
+  }
+
+  /** پیدا کردن اندیس ساعتِ متناظر با «همان ساعت محلی شهر مقصد» */
+  function findCurrentHourIndexWithTimezone(forecast: SimpleForecast, timeZone?: string): number {
+    if (!forecast.hourly || forecast.hourly.length === 0) return -1
+
+    const now = new Date()
+    const nowParts = getYMDH(now, timeZone)
+
+    // برای هر نقطهٔ ساعتی، قطعات آن را در همان timeZone محاسبه کن و مقایسه کن
+    for (let i = 0; i < forecast.hourly.length; i++) {
+      const p = forecast.hourly[i]!
+      // اطمینان از زمان پارس شده
+      const d = p.timeParsed ?? new Date(p.time)
+      const pParts = getYMDH(d, timeZone)
+
+      if (
+        pParts.year === nowParts.year &&
+        pParts.month === nowParts.month &&
+        pParts.day === nowParts.day &&
+        pParts.hour === nowParts.hour
+      ) {
+        return i
+      }
+    }
+
+    return -1
+  }
+
+  /* ===== Current weather helper با رعایت timezone ===== */
+  async function getCurrentWeatherWithTimezone(city: City) {
+    const simple = await getSimpleForecastForCity(city)
+    if (!simple) return null
+
+    const idx = findCurrentHourIndexWithTimezone(simple, city.timezone)
+    if (idx < 0) return null
+
+    const point = simple.hourly[idx]!
+    return {
+      temperature: point.values.temperature_2m ?? 0,
+      humidity: point.values.relativehumidity_2m ?? 0,
+      windspeed: point.values.windspeed_10m ?? 0,
+      weatherCode: point.values.weathercode ?? 0,
+      index: idx
+    }
+  }
+
 
   async function fetchWeatherForCities(cities: City[], opts?: { force?: boolean; ttl?: number }) {
     const result: Record<string, WeatherData | null> = {}
@@ -587,6 +832,7 @@ export const useWeatherStore = defineStore('weather', () => {
     // actions
     searchCities,
     getWeatherForCity,
+    getSimpleForecastForCity,
     fetchWeatherForCities,
     // favorites
     addFavorite,
@@ -599,6 +845,11 @@ export const useWeatherStore = defineStore('weather', () => {
     getCachedWeatherFromDB,
     cacheSnapshot,
     // admin
-    loadFromIndexedDB
+    loadFromIndexedDB,
+    // helpers (exposed for UI convenience)
+    forecastToSimple,
+    getHourlyValueFromSimple,
+    temperatureAt,
+    getCurrentWeatherWithTimezone
   }
 })

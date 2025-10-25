@@ -33,7 +33,6 @@ const props = defineProps<{
       <template #fallback>
         <span class="w-full bg-slate-300/50 animate-pulse h-20 rounded-3xl" />
       </template>
-      <template #resolve>کیر </template>
     </Suspense>
   </div>
 </template>
