@@ -1,4 +1,4 @@
-name: Deploy Vite (Vue) to GitHub Pages (safe assets & routing)
+name: Deploy Vite (Vue) to GitHub Pages — safe assets & routing
 
 on:
   push:
@@ -26,15 +26,15 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci
 
       - name: Build with relative base (prevents CORS/404 for assets)
-        # using relative base './' makes all asset paths relative to the HTML file origin
         run: npm run build -- --base ./
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Ensure SPA routing works on GitHub Pages
-        # copy index.html to 404.html so client-side routes fallback to app
         run: |
           if [ -d ./dist ]; then
             cp ./dist/index.html ./dist/404.html
@@ -46,9 +46,9 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Upload artifact (dist)
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
 
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
