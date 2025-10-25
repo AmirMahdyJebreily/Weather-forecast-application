@@ -2,8 +2,11 @@
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
 
-/* ================= Types ================= */
+/* ================= Strong Types for Open-Meteo ================= */
 
+/**
+ * شناسه شهر: lat:lon:name
+ */
 export type City = {
   id: string
   name: string
@@ -15,12 +18,15 @@ export type City = {
   population?: number
 }
 
+/* --- Geocoding --- */
 export type GeocodingResultItem = {
   id?: string
   name: string
   latitude: number
   longitude: number
+  elevation?: number
   country?: string
+  country_code?: string
   admin1?: string
   timezone?: string
   population?: number
@@ -28,33 +34,96 @@ export type GeocodingResultItem = {
   alternative_names?: string[]
 }
 
-export type GeocodingResponse = { results?: GeocodingResultItem[] }
+export type GeocodingResponse = {
+  results?: GeocodingResultItem[]
+}
 
+/* --- Hourly / Daily variable names (most common variables from Open-Meteo docs) --- */
+export type HourlyParam =
+  | 'temperature_2m'
+  | 'relativehumidity_2m'
+  | 'dewpoint_2m'
+  | 'apparent_temperature'
+  | 'precipitation'
+  | 'rain'
+  | 'showers'
+  | 'snowfall'
+  | 'snow_depth'
+  | 'windspeed_10m'
+  | 'winddirection_10m'
+  | 'windgusts_10m'
+  | 'pressure_msl'
+  | 'surface_pressure'
+  | 'cloudcover'
+  | 'cloudcover_low'
+  | 'visibility'
+  | 'evapotranspiration'
+  | 'weathercode'
+
+export type DailyParam =
+  | 'temperature_2m_max'
+  | 'temperature_2m_min'
+  | 'apparent_temperature_max'
+  | 'apparent_temperature_min'
+  | 'precipitation_sum'
+  | 'rain_sum'
+  | 'showers_sum'
+  | 'snowfall_sum'
+  | 'weathercode'
+  | 'sunrise'
+  | 'sunset'
+  | 'windspeed_10m_max'
+  | 'windgusts_10m_max'
+  | 'precipitation_hours'
+
+/* --- units objects returned by API --- */
+export type HourlyUnits = Partial<Record<HourlyParam | 'time', string>>
+export type DailyUnits = Partial<Record<DailyParam | 'time', string>>
+
+/* --- hourly/daily blocks typed precisely --- */
 export type HourlyBlock = {
   time: string[]
-  [param: string]: number[] | string[] | undefined
-}
+} & Partial<Record<HourlyParam, number[]>>
 
 export type DailyBlock = {
   time: string[]
-  [param: string]: number[] | string[] | undefined
+} & Partial<Record<DailyParam, (number | string)[]>>
+
+/* --- current_weather block (present in many endpoints) --- */
+export type CurrentWeather = {
+  temperature: number
+  windspeed: number
+  winddirection: number
+  weathercode: number
+  time: string
 }
 
+/* --- Forecast response typed --- */
 export type ForecastResponse = {
   latitude: number
   longitude: number
+  generationtime_ms?: number
+  utc_offset_seconds?: number
   timezone?: string
+  timezone_abbreviation?: string
+  elevation?: number
+  hourly_units?: HourlyUnits
+  daily_units?: DailyUnits
   hourly?: HourlyBlock
   daily?: DailyBlock
+  current_weather?: CurrentWeather
+  // any additional fields preserved as unknown
   [k: string]: unknown
 }
 
+/* --- app-level types --- */
 export type WeatherData = {
   fetchedAt: number
   timezone?: string
   hourly?: HourlyBlock
   daily?: DailyBlock
-  raw?: unknown
+  current?: CurrentWeather | null
+  raw?: ForecastResponse
 }
 
 type CacheEntry = {
@@ -74,7 +143,9 @@ const defaultTTL = 1000 * 60 * 10 // 10 minutes
 function cityIdFrom(lat: number, lon: number, name?: string) {
   return `${lat.toFixed(6)}:${lon.toFixed(6)}:${(name ?? '').replace(/\s+/g, '_')}`
 }
-function now() { return Date.now() }
+function now() {
+  return Date.now()
+}
 
 /* ===== IndexedDB tiny wrapper (no deps) ===== */
 
@@ -136,7 +207,7 @@ async function idbGetAll<T = unknown>(storeName: string): Promise<T[]> {
   })
 }
 
-/* ===== Store ===== */
+/* ===== Store implementation ===== */
 
 export const useWeatherStore = defineStore('weather', () => {
   /* state */
@@ -145,17 +216,15 @@ export const useWeatherStore = defineStore('weather', () => {
   const searchError = ref<string | null>(null)
   const inFlightSearchAbort = ref<AbortController | null>(null)
 
-  // in-memory cache map mirrors IndexedDB 'cache' store
-  const cache = reactive(new Map<string, CacheEntry>())
+  const cache = reactive(new Map<string, CacheEntry>()) // in-memory mirror of IDB 'cache'
   const inFlightRequests = reactive(new Map<string, Promise<WeatherData>>())
 
-  // favorites mirrors IndexedDB 'favorites' store
   const favorites = ref<City[]>([])
 
-  // load from IndexedDB once (async). not blocking store creation.
-  loadFromIndexedDB().catch(() => { /* ignore */ })
+  // async init from indexedDB (non-blocking)
+  loadFromIndexedDB().catch(() => { })
 
-  const favoriteIds = computed(() => new Set(favorites.value.map(c => c.id)))
+  const favoriteIds = computed(() => new Set(favorites.value.map((c) => c.id)))
   const isFavorite = (city: City) => favoriteIds.value.has(city.id)
 
   /* ===== IndexedDB sync helpers ===== */
@@ -167,13 +236,10 @@ export const useWeatherStore = defineStore('weather', () => {
 
       const cached = await idbGetAll<CacheEntry>('cache')
       if (cached && cached.length) {
-        for (const e of cached) {
-          cache.set(e.id, e)
-        }
+        for (const e of cached) cache.set(e.id, e)
       }
     } catch {
-      // silent failure; UI will fallback to network
-      // console.warn('IDB load failed', e)
+      // silent
     }
   }
 
@@ -188,22 +254,28 @@ export const useWeatherStore = defineStore('weather', () => {
 
   async function removeCacheEntry(id: string): Promise<void> {
     cache.delete(id)
-    try { await idbDelete('cache', id) } catch { }
+    try {
+      await idbDelete('cache', id)
+    } catch { }
   }
 
   async function persistFavorite(city: City): Promise<void> {
-    const existing = favorites.value.find(f => f.id === city.id)
+    const existing = favorites.value.find((f) => f.id === city.id)
     if (!existing) favorites.value.push(city)
-    try { await idbPut('favorites', city) } catch { }
+    try {
+      await idbPut('favorites', city)
+    } catch { }
   }
 
   async function deleteFavoriteFromDB(id: string): Promise<void> {
-    const idx = favorites.value.findIndex(f => f.id === id)
+    const idx = favorites.value.findIndex((f) => f.id === id)
     if (idx >= 0) favorites.value.splice(idx, 1)
-    try { await idbDelete('favorites', id) } catch { }
+    try {
+      await idbDelete('favorites', id)
+    } catch { }
   }
 
-  /* ===== Geocoding / Search (unchanged logic) ===== */
+  /* ===== Geocoding / search (Persian-aware) ===== */
 
   async function fetchGeocoding(q: string, limit = 10, language = 'en', signal?: AbortSignal) {
     const url = `${GEOCODING_BASE}?name=${encodeURIComponent(q)}&count=${limit}&language=${language}`
@@ -212,22 +284,31 @@ export const useWeatherStore = defineStore('weather', () => {
     return (await res.json()) as GeocodingResponse
   }
 
-  /** حذف اعراب و نرمالایز فارسی */
   function normalizePersian(input: string): string {
     if (!input) return input
     const withoutDiacritics = input.replace(/[\u064B-\u0652\u0670\u06D6-\u06ED]/g, '')
     const map: Record<string, string> = {
-      'ي': 'ی', 'ك': 'ک', 'ؤ': 'و', 'إ': 'ا', 'أ': 'ا', 'آ': 'ا',
-      'ى': 'ی', 'ة': 'ه', 'ۀ': 'ه', 'ٱ': 'ا'
+      ي: 'ی',
+      ك: 'ک',
+      ؤ: 'و',
+      إ: 'ا',
+      أ: 'ا',
+      آ: 'ا',
+      ى: 'ی',
+      ة: 'ه',
+      ۀ: 'ه',
+      ٱ: 'ا'
     }
-    let out = withoutDiacritics.replace(/./g, ch => map[ch] ?? ch)
+    let out = withoutDiacritics.replace(/./g, (ch) => map[ch] ?? ch)
     out = out.replace(/\u200c/g, '').replace(/\s+/g, ' ').trim()
     return out
   }
+
   function generatePersianVariants(query: string): string[] {
     const normalized = normalizePersian(query)
     const variants = new Set<string>([normalized])
     if (normalized.includes('ط')) variants.add(normalized.replace(/ط/g, 'ت'))
+    // قابل گسترش (ترنسلیترها، نگارش قدیم و ...)
     return Array.from(variants)
   }
 
@@ -264,22 +345,21 @@ export const useWeatherStore = defineStore('weather', () => {
         }
       }
 
-      const variantsToMatch = containsPersian ? generatePersianVariants(query).map(s => s.toLowerCase()) : [query.toLowerCase()]
+      const variantsToMatch = containsPersian
+        ? generatePersianVariants(query).map((s) => s.toLowerCase())
+        : [query.toLowerCase()]
 
       const results: City[] = (rawResults ?? [])
-        .map(r => {
-          const id = cityIdFrom(r.latitude, r.longitude, r.name)
-          return {
-            id,
-            name: r.name,
-            country: r.country,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            admin1: r.admin1,
-            timezone: r.timezone,
-            population: r.population
-          } as City
-        })
+        .map((r) => ({
+          id: cityIdFrom(r.latitude, r.longitude, r.name),
+          name: r.name,
+          country: r.country,
+          latitude: r.latitude,
+          longitude: r.longitude,
+          admin1: r.admin1,
+          timezone: r.timezone,
+          population: r.population
+        } as City))
         .filter((c, idx) => {
           if (!containsPersian) return true
           const r = rawResults[idx]!
@@ -287,8 +367,8 @@ export const useWeatherStore = defineStore('weather', () => {
           const localNames: string[] = []
           if (r.local_names) localNames.push(...Object.values(r.local_names))
           if (r.alternative_names) localNames.push(...r.alternative_names)
-          const candidates = [nameLower, ...localNames.map(x => x.toLowerCase())]
-          return variantsToMatch.some(v => candidates.some(s => s.includes(v)))
+          const candidates = [nameLower, ...localNames.map((x) => x.toLowerCase())]
+          return variantsToMatch.some((v) => candidates.some((s) => s.includes(v)))
         })
 
       searchResults.value = results
@@ -304,16 +384,42 @@ export const useWeatherStore = defineStore('weather', () => {
     }
   }
 
-  /* ===== Forecast / cache logic (persist to IDB) ===== */
+  /* ===== Forecast / cache (uses typed ForecastResponse) ===== */
 
-  function buildForecastUrl(lat: number, lon: number, opts?: {
-    hourly?: string[]; daily?: string[]; timezone?: string; start?: string; end?: string
-  }) {
+  function buildForecastUrl(
+    lat: number,
+    lon: number,
+    opts?: {
+      hourly?: HourlyParam[]
+      daily?: DailyParam[]
+      timezone?: string
+      start?: string
+      end?: string
+      forecast_days?: number
+    }
+  ) {
     const hourly = (opts?.hourly ?? [
-      'temperature_2m', 'relativehumidity_2m', 'apparent_temperature', 'precipitation',
-      'rain', 'showers', 'snowfall', 'windspeed_10m', 'winddirection_10m', 'weathercode'
-    ]).join(',')
-    const daily = (opts?.daily ?? ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'weathercode']).join(',')
+      'temperature_2m',
+      'relativehumidity_2m',
+      'apparent_temperature',
+      'precipitation',
+      'rain',
+      'showers',
+      'snowfall',
+      'windspeed_10m',
+      'winddirection_10m',
+      'weathercode'
+    ] as HourlyParam[]).join(',')
+
+    const daily = (opts?.daily ?? [
+      'temperature_2m_max',
+      'temperature_2m_min',
+      'precipitation_sum',
+      'weathercode',
+      'sunrise',
+      'sunset'
+    ] as DailyParam[]).join(',')
+
     const params = new URLSearchParams({
       latitude: String(lat),
       longitude: String(lon),
@@ -323,25 +429,28 @@ export const useWeatherStore = defineStore('weather', () => {
     })
     if (opts?.start) params.set('start_date', opts.start)
     if (opts?.end) params.set('end_date', opts.end)
+    if (typeof opts?.forecast_days === 'number') params.set('forecast_days', String(opts.forecast_days))
     return `${FORECAST_BASE}?${params.toString()}`
   }
 
-  function cacheKeyFor(city: City) { return city.id }
+  function cacheKeyFor(city: City) {
+    return city.id
+  }
 
   async function getWeatherForCity(city: City, opts?: { force?: boolean; ttl?: number }): Promise<WeatherData> {
     const key = cacheKeyFor(city)
     const existing = cache.get(key)
     const ttl = opts?.ttl ?? defaultTTL
 
-    if (!opts?.force && existing && (now() - existing.data.fetchedAt) < existing.ttl) {
+    if (!opts?.force && existing && now() - existing.data.fetchedAt < existing.ttl) {
       return existing.data
     }
 
-    // if not in memory, try to read from IDB as fallback before network
+    // try IDB fallback if not in memory
     if (!existing) {
       try {
         const e = await idbGet<CacheEntry>('cache', key)
-        if (e && (now() - e.data.fetchedAt) < e.ttl) {
+        if (e && now() - e.data.fetchedAt < e.ttl) {
           cache.set(key, e)
           return e.data
         }
@@ -360,15 +469,18 @@ export const useWeatherStore = defineStore('weather', () => {
         const res = await fetch(url)
         if (!res.ok) throw new Error(`forecast failed: ${res.status}`)
         const json = (await res.json()) as ForecastResponse
+
         const payload: WeatherData = {
           fetchedAt: now(),
           timezone: json.timezone ?? city.timezone,
           hourly: json.hourly,
           daily: json.daily,
+          current: (json.current_weather as CurrentWeather) ?? null,
           raw: json
         }
+
         const entry: CacheEntry = { id: key, data: payload, ttl }
-        await persistCacheEntry(entry) // persist to memory + IDB
+        await persistCacheEntry(entry)
         return payload
       } finally {
         inFlightRequests.delete(key)
@@ -381,13 +493,19 @@ export const useWeatherStore = defineStore('weather', () => {
 
   async function fetchWeatherForCities(cities: City[], opts?: { force?: boolean; ttl?: number }) {
     const result: Record<string, WeatherData | null> = {}
-    await Promise.all(cities.map(async c => {
-      try { result[c.id] = await getWeatherForCity(c, opts) } catch { result[c.id] = null }
-    }))
+    await Promise.all(
+      cities.map(async (c) => {
+        try {
+          result[c.id] = await getWeatherForCity(c, opts)
+        } catch {
+          result[c.id] = null
+        }
+      })
+    )
     return result
   }
 
-  /* ===== Favorites management (persist to IDB) ===== */
+  /* ===== Favorites (persisted) ===== */
 
   async function addFavorite(city: City) {
     if (isFavorite(city)) return
@@ -410,14 +528,12 @@ export const useWeatherStore = defineStore('weather', () => {
     const item = arr.splice(from, 1)[0]!
     const toIndex = Math.max(0, Math.min(to, arr.length))
     arr.splice(toIndex, 0, item)
-      // sync all favorites to IDB (simple approach)
+      // sync favorites snapshot to IDB (simple approach)
       ; (async () => {
         try {
-          // clear and rewrite to keep DB consistent
           const db = await openDB()
           const tx = db.transaction('favorites', 'readwrite')
           const store = tx.objectStore('favorites')
-          // clear store
           store.clear()
           for (const f of favorites.value) store.put(f)
         } catch {
@@ -426,7 +542,7 @@ export const useWeatherStore = defineStore('weather', () => {
       })()
   }
 
-  /* ===== Cache ops ===== */
+  /* ===== Cache ops & helpers ===== */
 
   async function removeFromCache(city: City) {
     await removeCacheEntry(cacheKeyFor(city))
@@ -452,7 +568,9 @@ export const useWeatherStore = defineStore('weather', () => {
 
   function cacheSnapshot() {
     const out: Record<string, { ageMs: number; ttl: number }> = {}
-    cache.forEach((v, k) => { out[k] = { ageMs: now() - v.data.fetchedAt, ttl: v.ttl } })
+    cache.forEach((v, k) => {
+      out[k] = { ageMs: now() - v.data.fetchedAt, ttl: v.ttl }
+    })
     return out
   }
 
