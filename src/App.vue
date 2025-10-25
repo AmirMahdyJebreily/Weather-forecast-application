@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import BackButton from './components/back-button.vue'
+//import BackButton from './components/back-button.vue'
 </script>
 
 <template>
   <main dir="rtl" class="app-container">
-    <section class="app-bar">
+    <!-- <section class="app-bar">
       <BackButton />
       <h1 class="text-slate-400 font-medium">...</h1>
-    </section>
+    </section> -->
     <RouterView />
-    <!-- <footer class="text-slate-500 text-sm flex items-end justify-center">
+    <footer class="text-slate-500 text-sm flex items-end justify-center">
       &copy; صنایع خلاق نسیم مهر 1404
-    </footer> -->
+    </footer>
   </main>
 </template>
 

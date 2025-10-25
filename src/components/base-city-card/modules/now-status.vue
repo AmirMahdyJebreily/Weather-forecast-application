@@ -102,32 +102,33 @@ function mapWeatherCodeToFarsi(code: number): WeatherFarsi {
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
+  <div class="flex items-center justify-between gap-2">
     <!-- <SunIcon class="size-10 flex-none text-sky-700" /> -->
     <span
-      class="flex items-center justify-start flex-col bg-gradient-to-t from-slate-400/20 pb-2 gap-1 relative top-6 right-2 border-b border-slate-100 shadow-inner rounded-xl w-24 h-32"
+      class="flex items-center justify-center flex-col flex-none bg-gradient-to-t from-slate-400/20 pb-2 gap-1 border-b border-slate-100 shadow-inner rounded-xl max-w-20 h-32"
     >
       <img
-        class="h-[6rem] w-auto object-center object-contain rounded-xl"
+        class="object-center object-contain rounded-xl"
         :src="`https://openweathermap.org/img/wn/${mapMeteoToOwmBase(weatherCode)}d@2x.png`"
       />
       <p class="text-sm text-sky-700">{{ mapWeatherCodeToFarsi(weatherCode).title }}</p>
     </span>
+    <div class="flex flex-col items-start justify-start gap-2 w-full">
+      <span class="flex items-end justify-start gap-1">
+        <p class="font-medium flex-none text-slate-500/80">🌫</p>
+        <p class="text-sky-700/75 text-xs font-semibold mb-1">KM/H</p>
+        <p class="font-black text-xl text-slate-500/80">{{ windspeed }}</p>
+      </span>
+
+      <span class="flex items-end justify-start gap-1">
+        <p class="font-medium flex-none text-slate-500/80">💧</p>
+        <p class="text-sky-700/75 text-xs font-semibold mb-0.5">%</p>
+        <p class="font-black text-xl text-slate-500/80">{{ humidity }}</p>
+      </span>
+    </div>
     <span class="flex items-end justify-start ms-9 pt-2 gap-1">
       <p class="text-sky-700 font-semibold mb-1">C°</p>
-      <p class="font-black text-6xl text-slate-500/90">{{ tempereture }}</p>
-    </span>
-  </div>
-
-  <div class="flex items-center justify-end gap-4">
-    <span class="flex items-end justify-start ms-9 gap-1">
-      <p class="text-sky-700/75 text-xs font-semibold mb-1">KM/H</p>
-      <p class="font-black text-xl text-slate-500/80">{{ windspeed }}</p>
-    </span>
-
-    <span class="flex items-end justify-start gap-1">
-      <p class="text-sky-700/75 text-xs font-semibold mb-1">%</p>
-      <p class="font-black text-xl text-slate-500/80">{{ humidity }}</p>
+      <p class="font-black text-5xl text-slate-500/90">{{ tempereture }}</p>
     </span>
   </div>
 </template>
