@@ -3,6 +3,7 @@ import { nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import { MapPinIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon } from '@heroicons/vue/24/solid'
 
 const el = useTemplateRef('scroller')
 const loading = ref<boolean>(false)
@@ -53,7 +54,7 @@ onMounted(async () => {
   >
     <BaseCityCard v-for="value in store.searchResults" :key="value.id" :city="value" />
     <div
-      class="flex flex-col items-center justify-center gap-1 h-3/5 text-slate-500/80"
+      class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
       v-if="store.searchResults.length < 1 && !loading"
     >
       <MapPinIcon class="size-20" />
@@ -64,5 +65,11 @@ onMounted(async () => {
     <div class="flex flex-col items-center justify-center gap-1 w-full" v-if="loading">
       <span class="bg-slate-300/60 animate-pulse rounded-3xl h-[174px] w-full"></span>
     </div>
+
+    <button
+      :class="`fixed flex items-center !transition-[left] duration-1000 justify-center size-14 bg-gradient-to-t from-slate-400/50 shadow-lg shadow-slate-4/7000 backdrop-blur-md to-slate-300/50 rounded-full bottom-12 ${!(store.searchResults.length < 1 && !loading) ? 'left-6' : 'before:absolute before:rounded-full before:animate-ping animate-bounce z-50 before:bg-gray-100/50 before:z-40 before:size-full'} text-slate-600`"
+    >
+      <PlusIcon class="size-7" />
+    </button>
   </div>
 </template>
