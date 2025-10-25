@@ -66,10 +66,11 @@ onMounted(async () => {
       <span class="bg-slate-300/60 animate-pulse rounded-3xl h-[174px] w-full"></span>
     </div>
 
-    <button
+    <RouterLink
+      :to="{ name: 'srchloc' }"
       :class="`fixed flex items-center !transition-[left] duration-1000 justify-center size-14 bg-gradient-to-t from-slate-400/50 shadow-lg shadow-slate-4/7000 backdrop-blur-md to-slate-300/50 rounded-full bottom-12 ${!(store.searchResults.length < 1 && !loading) ? 'left-6' : 'before:absolute before:rounded-full before:animate-ping animate-bounce z-50 before:bg-gray-100/50 before:z-40 before:size-full'} text-slate-600`"
     >
       <PlusIcon class="size-7" />
-    </button>
+    </RouterLink>
   </div>
 </template>

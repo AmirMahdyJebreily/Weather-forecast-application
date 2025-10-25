@@ -14,12 +14,37 @@ const route = useRoute()
       </h1>
       <span class="w-6" />
     </section>
-    <RouterView />
+    <router-view v-slot="{ Component }">
+      <transition :name="(route.meta.transition as string) || 'slide-up'" mode="out-in">
+        <div class="w-full h-full" :key="route.fullPath">
+          <component :is="Component" :key="route.fullPath" />
+        </div>
+      </transition>
+    </router-view>
+
     <footer class="text-slate-500 text-sm flex items-end justify-center">
       &copy; صنایع خلاق نسیم مهر 1404
     </footer>
   </main>
 </template>
+
+<style>
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.075s ease-out;
+  position: relative;
+  width: 100%;
+}
+
+.slide-up-enter-from {
+  transform: translateY(100%);
+  opacity: 0;
+}
+.slide-up-leave-to {
+  transform: translateY(-10%);
+  opacity: 0;
+}
+</style>
 
 <style lang="css" scoped>
 .app-bar {
