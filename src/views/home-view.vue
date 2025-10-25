@@ -2,6 +2,7 @@
 import { nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
+import { MapPinIcon } from '@heroicons/vue/24/outline'
 
 const el = useTemplateRef('scroller')
 const loading = ref<boolean>(false)
@@ -52,16 +53,16 @@ onMounted(async () => {
   >
     <BaseCityCard v-for="value in store.searchResults" :key="value.id" :city="value" />
     <div
-      class="flex flex-col items-center justify-center gap-1"
+      class="flex flex-col items-center justify-center gap-1 h-3/5 text-slate-500/80"
       v-if="store.searchResults.length < 1 && !loading"
     >
-      <span class="text-7xl py-3 font-black text-slate-600 hue-rotate-180">😢</span>
-      <span class="text-3xl font-black text-slate-600">مکانی نیست!</span>
-      <span class="text-xl font-medium text-slate-500">مکانی انتخاب کنید...</span>
+      <MapPinIcon class="size-20" />
+      <span class="text-3xl font-bold">مکانی نیست!</span>
+      <span class="text-xl font-light">مکانی انتخاب کنید...</span>
     </div>
 
-    <div class="flex flex-col items-center justify-center gap-1 h-3/5" v-if="loading">
-      <span class="text-8xl font-black text-slate-600 animate-bounce">🔎</span>
+    <div class="flex flex-col items-center justify-center gap-1 w-full" v-if="loading">
+      <span class="bg-slate-300/60 animate-pulse rounded-3xl h-[174px] w-full"></span>
     </div>
   </div>
 </template>

@@ -31,7 +31,7 @@ const props = defineProps<{
     <Suspense suspensible>
       <component :is="nowStatus" :city="props.city" />
       <template #fallback>
-        <span class="w-full bg-slate-300/50 animate-pulse h-36 rounded-3xl" />
+        <span class="w-full bg-slate-300/80 animate-pulse h-[100px] rounded-3xl" />
       </template>
     </Suspense>
   </div>
