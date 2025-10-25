@@ -19,7 +19,7 @@ const props = defineProps<{
         >
           <MapPinIcon class="size-5 inline-block m-auto" />
         </span>
-        <p class="pt-0.5 text-lg">
+        <p class="pt-0.5 text-xl">
           {{ props.city.name }}
           <span class="text-xs">({{ props.city.admin1 }}, {{ props.city.country }})</span>
         </p>
@@ -31,7 +31,7 @@ const props = defineProps<{
     <Suspense suspensible>
       <component :is="nowStatus" :city="props.city" />
       <template #fallback>
-        <span class="w-full bg-slate-300/50 animate-pulse h-20 rounded-3xl" />
+        <span class="w-full bg-slate-300/50 animate-pulse h-36 rounded-3xl" />
       </template>
     </Suspense>
   </div>
@@ -39,6 +39,6 @@ const props = defineProps<{
 
 <style lang="css" scoped>
 .city-card {
-  @apply flex flex-col items-stretch justify-stretch w-full bg-gradient-to-l from-slate-300/60 via-slate-300/10 to-slate-300/30 rounded-3xl shadow-inner border-b-2 border-slate-100/70 shadow-slate-400/30 gap-2 pt-4 px-6 pb-8 text-gray-600;
+  @apply flex flex-col items-stretch justify-stretch w-full bg-gradient-to-l from-slate-300/60 via-slate-300/10 to-slate-300/30 rounded-3xl shadow-inner border-b-2 border-slate-100/70 shadow-slate-400/30 gap-2 py-4 px-6 text-gray-600;
 }
 </style>
