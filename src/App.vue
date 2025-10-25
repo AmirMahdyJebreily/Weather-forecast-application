@@ -1,13 +1,19 @@
 <script setup lang="ts">
-//import BackButton from './components/back-button.vue'
+import { useRoute } from 'vue-router'
+import BackButton from './components/back-button.vue'
+
+const route = useRoute()
 </script>
 
 <template>
   <main dir="rtl" class="app-container">
-    <!-- <section class="app-bar">
+    <section class="app-bar">
       <BackButton />
-      <h1 class="text-slate-400 font-medium">...</h1>
-    </section> -->
+      <h1 class="text-slate-500 font-semibold text-lg w-full text-center">
+        {{ route.meta.title ?? 'هوا چطوره؟' }}
+      </h1>
+      <span class="w-6" />
+    </section>
     <RouterView />
     <footer class="text-slate-500 text-sm flex items-end justify-center">
       &copy; صنایع خلاق نسیم مهر 1404
