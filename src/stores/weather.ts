@@ -185,7 +185,7 @@ async function openDB(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => {
       const db = req.result
       if (!db.objectStoreNames.contains('favorites')) db.createObjectStore('favorites', { keyPath: 'id' })
-      if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'id' })
+      if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'id2' })
       if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' })
     }
     req.onsuccess = () => resolve(req.result)
@@ -406,7 +406,9 @@ export const useWeatherStore = defineStore('weather', () => {
     if (!existing) favorites.value.push(city)
     try {
       await idbPut('favorites', city)
-    } catch { }
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   async function deleteFavoriteFromDB(id: string): Promise<void> {

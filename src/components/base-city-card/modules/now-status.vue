@@ -23,7 +23,6 @@ if (props.city) {
   humidity.value = current?.humidity ?? 0
   windspeed.value = current?.windspeed ?? 0
   weatherCode.value = current?.weatherCode ?? 0
-  console.log(current?.index)
 }
 
 await nextTick()
@@ -118,25 +117,22 @@ function getWeatherIconUrl(code: number, date: Date): string {
         </p>
       </span>
 
-      <diV class="flex items-center justify-center gap-1">
+      <div class="flex items-center justify-center gap-1">
         <span
           class="flex items-center justify-center px-2 gap-0.5 w-20 bg-gradient-to-t from-slate-300 to-slate-300/20 shadow pt-1 rounded-full text-slate-500/90"
         >
           <p class="text-sm font-medium">%</p>
           <p class="font-semibold text-lg w-10 text-center">{{ humidity }}</p>
-          <component :is="HumidityIcon" class="size-5 fill-current flex-none" />
+          <HumidityIcon class="size-5 fill-current flex-none" />
         </span>
         <span
           class="flex items-center justify-center px-2 gap-0.5 bg-gradient-to-t from-slate-300 to-slate-300/20 shadow pt-1 rounded-full text-slate-500/90"
         >
           <p class="text-sm font-medium">KM/H</p>
           <p class="font-semibold text-lg w-10 text-center">{{ windspeed }}</p>
-          <component
-            :is="WindIcon"
-            class="size-5 relative bottom-0.5 left-0.5 fill-current flex-none"
-          />
+          <WindIcon class="size-5 relative bottom-0.5 left-0.5 fill-current flex-none" />
         </span>
-      </diV>
+      </div>
     </div>
   </div>
 </template>

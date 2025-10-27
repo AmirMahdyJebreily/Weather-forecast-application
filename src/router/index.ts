@@ -7,12 +7,18 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
-      component: HomeView
+      component: HomeView,
+      meta: {
+        title: 'هوا چطوره؟'
+      }
     },
     {
-      path: "/{cityName}",
-      name: 'single-city',
-      component: HomeView
+      path: "/search-location",
+      name: 'srchloc',
+      component: () => import('@/views/search-view.vue'),
+      meta: {
+        title: 'جستجوی مکان'
+      }
     }
   ],
 })
