@@ -3,11 +3,16 @@ import { MapPinIcon } from '@heroicons/vue/24/solid'
 import type { City } from '@/stores/weather'
 import { defineAsyncComponent } from 'vue'
 
-const nowStatus = defineAsyncComponent(() => import('./modules/now-status.vue'))
-
 const props = defineProps<{
   city: City
+  module?: string
 }>()
+
+const modules: Array<object> = []
+
+if (props.module && props.module.length) {
+  modules.push(defineAsyncComponent(() => import(props.module!)))
+}
 </script>
 
 <template>
@@ -28,12 +33,14 @@ const props = defineProps<{
 
     <!--Modules-->
 
-    <Suspense suspensible>
-      <component :is="nowStatus" :city="props.city" />
-      <template #fallback>
-        <span class="w-full bg-slate-300/80 animate-pulse h-[100px] rounded-3xl" />
-      </template>
-    </Suspense>
+    <template v-for="module in modules">
+      <Suspense suspensible>
+        <component :is="module" :city="props.city" />
+        <template #fallback>
+          <span class="w-full bg-slate-300/80 animate-pulse h-[100px] rounded-3xl" />
+        </template>
+      </Suspense>
+    </template>
   </div>
 </template>
 

@@ -20,7 +20,7 @@ async function Search() {
     await store.searchCities(searchCity.value)
     await nextTick()
     loading.value = false
-  }, 400) // ← زمان انتظار (به میلی‌ثانیه)
+  }, 700)
 }
 </script>
 
