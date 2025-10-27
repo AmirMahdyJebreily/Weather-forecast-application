@@ -16,7 +16,10 @@ const route = useRoute()
     </section>
     <router-view v-slot="{ Component }">
       <transition :name="(route.meta.transition as string) || 'slide-up'" mode="out-in">
-        <div class="w-full h-full" :key="route.fullPath">
+        <div
+          class="flex flex-col items-center justify-start w-full flex-1 overflow-hidden"
+          :key="route.fullPath"
+        >
           <component :is="Component" :key="route.fullPath" />
         </div>
       </transition>
@@ -51,6 +54,6 @@ const route = useRoute()
   @apply w-full pb-4 pt-2 flex items-center justify-between flex-none;
 }
 .app-container {
-  @apply w-full h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gradient-to-t from-slate-200 via-slate-100 to-slate-200 font-vazir gap-1;
+  @apply w-full max-h-dvh h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gradient-to-t from-slate-200 via-slate-100 to-slate-200 font-vazir gap-1;
 }
 </style>

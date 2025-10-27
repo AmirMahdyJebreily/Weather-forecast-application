@@ -15,7 +15,7 @@ const router = createRouter({
     {
       path: "/search-location",
       name: 'srchloc',
-      component: import('@/views/search-view.vue'),
+      component: () => import('@/views/search-view.vue'),
       meta: {
         title: 'جستجوی مکان'
       }

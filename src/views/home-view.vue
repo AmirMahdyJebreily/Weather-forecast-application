@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, useTemplateRef } from 'vue'
+import { onMounted, useTemplateRef } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import { MapPinIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon } from '@heroicons/vue/24/solid'
 
-const el = useTemplateRef('scroller')
-
-let timeout = -1
-
 const store = useWeatherStore()
 
+const el = useTemplateRef('scroller')
+let timeout = -1
 onMounted(async () => {
   if (el.value) {
     el.value.addEventListener('scroll', () => {
@@ -29,7 +27,12 @@ onMounted(async () => {
     ref="scroller"
     class="w-full flex flex-col items-center justify-start gap-2 flex-1 h-full overflow-auto p-2 pl-3s scrollbar-mobile rounded-3xl"
   >
-    <BaseCityCard v-for="value in store.favorites" :key="value.id" :city="value" />
+    <BaseCityCard
+      v-for="value in store.favorites"
+      :key="value.id"
+      :city="value"
+      module="now-status"
+    />
     <div
       class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
       v-if="store.favorites.length < 1 && !store.loadingSearch"
