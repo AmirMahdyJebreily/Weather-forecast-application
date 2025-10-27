@@ -34,7 +34,7 @@ const route = useRoute()
 <style>
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: all 0.3s ease-out;
+  transition: all 0.1s ease-out;
   position: relative;
   width: 100%;
 }
