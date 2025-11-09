@@ -26,12 +26,7 @@ if (props.module && props.module.length) {
         </span>
         <p class="pt-0.5 text-xl">
           {{ props.city.name }}
-          <span class="text-xs"
-            >({{ props.city.admin1 }}, {{ props.city.country }}) (<span
-              class="text-xs font-mono py-1 text-slate-950/50"
-              >{{ props.city.latitude.toFixed(1) }}, {{ props.city.longitude.toFixed(1) }}</span
-            >)
-          </span>
+          <span class="text-xs">({{ props.city.admin1 }}, {{ props.city.country }}) </span>
         </p>
       </span>
     </div>

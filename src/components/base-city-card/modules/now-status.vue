@@ -103,7 +103,7 @@ function getWeatherIconUrl(code: number, date: Date): string {
     <!-- <SunIcon class="size-10 flex-none text-sky-700" /> -->
     <span class="flex items-center justify-center flex-col flex-none relative -top-2 left-2">
       <img
-        class="object-center object-contain rounded-xl brightness-100"
+        class="object-center object-contain rounded-xl brightness-100 relative bottom-2"
         :src="getWeatherIconUrl(weatherCode, new Date())"
       />
       <p class="text-sm text-sky-700">{{ mapWeatherCodeToFarsi(weatherCode).title }}</p>
@@ -117,22 +117,24 @@ function getWeatherIconUrl(code: number, date: Date): string {
         </p>
       </span>
 
-      <div class="flex items-center justify-center gap-1">
-        <span
-          class="flex items-center justify-center px-2 gap-0.5 w-20 bg-gradient-to-t from-slate-300 to-slate-300/20 shadow pt-1 rounded-full text-slate-500/90"
-        >
+      <div class="flex items-center justify-center gap-3 text-gray-500">
+        <span class="now-status-badges">
           <p class="text-sm font-medium">%</p>
-          <p class="font-semibold text-lg w-10 text-center">{{ humidity }}</p>
-          <HumidityIcon class="size-5 fill-current flex-none" />
+          <p class="font-semibold text-center">{{ humidity }}</p>
+          <HumidityIcon class="size-5 fill-current flex-none mx-1.5" />
         </span>
-        <span
-          class="flex items-center justify-center px-2 gap-0.5 bg-gradient-to-t from-slate-300 to-slate-300/20 shadow pt-1 rounded-full text-slate-500/90"
-        >
-          <p class="text-sm font-medium">KM/H</p>
-          <p class="font-semibold text-lg w-10 text-center">{{ windspeed }}</p>
-          <WindIcon class="size-5 relative bottom-0.5 left-0.5 fill-current flex-none" />
+        <span class="now-status-badges">
+          <p class="text-sm font-medium mx-0.5">KM/H</p>
+          <p class="font-semibold text-lg text-center">{{ windspeed }}</p>
+          <WindIcon class="size-5 relative bottom-0.5 left-0.5 fill-current flex-none mx-1.5" />
         </span>
       </div>
     </div>
   </div>
 </template>
+
+<style lang="css" scoped>
+.now-status-badges {
+  @apply flex items-center justify-center flex-none;
+}
+</style>
