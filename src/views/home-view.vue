@@ -25,7 +25,7 @@ onMounted(async () => {
 <template>
   <div
     ref="scroller"
-    class="w-full flex flex-col items-center justify-start gap-2 flex-1 h-full overflow-auto p-2 pl-3s scrollbar-mobile rounded-3xl"
+    class="w-full flex flex-col items-center justify-start bg-slate-50/50 gap-3 flex-1 h-full overflow-auto p-3 pl-3s scrollbar-mobile rounded-3xl"
   >
     <BaseCityCard
       v-for="value in store.favorites"

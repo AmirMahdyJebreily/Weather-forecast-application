@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { MapPinIcon } from '@heroicons/vue/24/solid'
 import type { City } from '@/stores/weather'
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, ref } from 'vue'
 
 const props = defineProps<{
   city: City
@@ -9,6 +9,8 @@ const props = defineProps<{
 }>()
 
 const modules: Array<object> = []
+
+const showCityInfo = ref<boolean>(false)
 
 if (props.module && props.module.length) {
   modules.push(defineAsyncComponent(() => import(`./modules/${props.module!}.vue`)))
@@ -18,15 +20,22 @@ if (props.module && props.module.length) {
 <template>
   <div class="city-card">
     <div class="flex items-center justify-between w-full">
-      <span class="flex items-start justify-center gap-2">
+      <span
+        class="flex items-start justify-center gap-2 w-full"
+        @click="showCityInfo = !showCityInfo"
+      >
         <span
           class="size-8 text-sky-700 flex items-center justify-center bg-slate-400/35 rounded-full"
         >
           <MapPinIcon class="size-5 inline-block m-auto" />
         </span>
-        <p class="pt-0.5 text-xl">
+        <p class="pt-0.5 text-xl flex items-center justify-start w-full gap-1">
           {{ props.city.name }}
-          <span class="text-xs">({{ props.city.admin1 }}, {{ props.city.country }}) </span>
+          <span
+            :class="`text-gray-500 flex-none text-ellipsis text-nowrap overflow-hidden transition-[width] ease-out duration-700 ${showCityInfo ? 'w-full' : 'w-7'}`"
+          >
+            {{ showCityInfo ? `${props.city.admin1}, ${props.city.country}` : '...' }}
+          </span>
         </p>
       </span>
     </div>
@@ -46,6 +55,6 @@ if (props.module && props.module.length) {
 
 <style lang="css" scoped>
 .city-card {
-  @apply flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-l from-slate-300/60 via-slate-300/10 to-slate-300/30 rounded-3xl shadow-inner border-b-2 border-slate-100/70 shadow-slate-400/30 gap-2 py-4 px-6;
+  @apply flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-tl from-slate-50/50 to-slate-200/50 rounded-3xl border border-slate-200 shadow gap-2 py-4 px-6;
 }
 </style>
