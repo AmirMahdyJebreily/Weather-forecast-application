@@ -10,7 +10,7 @@ const store = useWeatherStore()
 
 const el = useTemplateRef('scroller')
 
-const { height } = useScrollShrink(el, 200, 70, 600)
+const { height } = useScrollShrink(el, 200, 100, 600)
 
 const headerStyle = computed(() => ({
   height: height.value ? height.value.toFixed(2) + 'px' : '100%',
@@ -32,10 +32,25 @@ onMounted(async () => {
 
 <template>
   <div
-    class="w-full container flex items-center will-change-scroll justify-center py-4"
+    class="w-full container flex-col flex gap-2 items-center will-change-scroll justify-center pb-4"
     :style="headerStyle"
   >
     <h1 class="text-3xl font-extrabold text-slate-700">هوا چطوره ؟</h1>
+    <h2 class="text-xl font-medium text-slate-600">
+      {{
+        new Date().toLocaleDateString('fa-IR', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long',
+        })
+      }}، ساعت
+      {{
+        new Date().toLocaleTimeString('fa-IR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      }}
+    </h2>
   </div>
   <div
     ref="scroller"
