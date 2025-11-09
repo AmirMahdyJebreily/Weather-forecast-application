@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { onMounted, useTemplateRef } from 'vue'
+import { computed, onMounted, useTemplateRef } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import { MapPinIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon } from '@heroicons/vue/24/solid'
+import { useScrollShrink } from '@/composables/useScrollShrink'
 
 const store = useWeatherStore()
 
 const el = useTemplateRef('scroller')
+
+const { height } = useScrollShrink(el, 200, 70, 600)
+
+const headerStyle = computed(() => ({
+  height: height.value ? height.value.toFixed(2) + 'px' : '100%',
+}))
+
 let timeout = -1
 onMounted(async () => {
   if (el.value) {
@@ -24,8 +32,14 @@ onMounted(async () => {
 
 <template>
   <div
+    class="w-full container flex items-center will-change-scroll justify-center py-4"
+    :style="headerStyle"
+  >
+    <h1 class="text-3xl font-extrabold text-slate-700">هوا چطوره ؟</h1>
+  </div>
+  <div
     ref="scroller"
-    class="w-full flex flex-col items-center justify-start bg-slate-50/50 gap-3 flex-1 h-full overflow-auto p-3 pl-3s scrollbar-mobile rounded-3xl"
+    class="w-full flex flex-col scroll-py-2 items-center justify-start bg-slate-50/50 gap-3 flex-1 h-full overflow-auto p-3 pl-3s scrollbar-mobile rounded-3xl border-y-8 border-slate-100"
   >
     <BaseCityCard
       v-for="value in store.favorites"
