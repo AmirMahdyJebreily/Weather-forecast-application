@@ -3,14 +3,27 @@ import { MapPinIcon } from '@heroicons/vue/24/solid'
 import type { City } from '@/stores/weather'
 import { defineAsyncComponent, ref } from 'vue'
 
-const props = defineProps<{
-  city: City
-  module?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    city: City
+    module?: string
+    infoHidable?: boolean
+  }>(),
+  {
+    infoHidable: true,
+  },
+)
 
 const modules: Array<object> = []
 
-const showCityInfo = ref<boolean>(false)
+const showCityInfo = ref<boolean>(!props.infoHidable)
+
+function toggleShowCityInfo() {
+  if (!props.infoHidable) {
+    return
+  }
+  showCityInfo.value = !showCityInfo.value
+}
 
 if (props.module && props.module.length) {
   modules.push(defineAsyncComponent(() => import(`./modules/${props.module!}.vue`)))
@@ -20,10 +33,7 @@ if (props.module && props.module.length) {
 <template>
   <div class="city-card">
     <div class="flex items-center justify-between w-full">
-      <span
-        class="flex items-start justify-center gap-2 w-full"
-        @click="showCityInfo = !showCityInfo"
-      >
+      <span class="flex items-start justify-center gap-2 w-full" @click="toggleShowCityInfo">
         <span
           class="size-8 text-sky-700 flex items-center justify-center bg-slate-400/35 rounded-full"
         >

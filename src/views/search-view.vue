@@ -102,6 +102,7 @@ async function startEventLeastener() {
       class="w-full scroller flex flex-col items-center justify-start gap-2 flex-1 h-full overflow-auto p-2 pl-3 scrollbar-mobile rounded-3xl"
     >
       <BaseCityCard
+        :info-hidable="false"
         :city="value"
         v-for="(value, index) in reorderedCities"
         :key="'srchres' + value.id"
