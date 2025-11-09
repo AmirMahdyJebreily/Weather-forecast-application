@@ -35,7 +35,7 @@ if (props.module && props.module.length) {
     <div class="flex items-center justify-between w-full">
       <span class="flex items-start justify-center gap-2 w-full" @click="toggleShowCityInfo">
         <span
-          class="size-8 text-sky-700 flex items-center justify-center bg-slate-400/35 rounded-full"
+          class="size-8 text-sky-700 flex-none flex items-center justify-center bg-slate-400/35 rounded-full"
         >
           <MapPinIcon class="size-5 inline-block m-auto" />
         </span>
@@ -47,6 +47,9 @@ if (props.module && props.module.length) {
             {{ showCityInfo ? `${props.city.admin1}, ${props.city.country}` : '...' }}
           </span>
         </p>
+      </span>
+      <span class="flex items-end justify-center gap-2 flex-none">
+        <slot name="actions" />
       </span>
     </div>
 

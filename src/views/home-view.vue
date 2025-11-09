@@ -2,7 +2,7 @@
 import { computed, onMounted, useTemplateRef } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
-import { MapPinIcon } from '@heroicons/vue/24/outline'
+import { MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon } from '@heroicons/vue/24/solid'
 import { useScrollShrink } from '@/composables/useScrollShrink'
 
@@ -32,6 +32,7 @@ onMounted(async () => {
 
 <template>
   <div
+    v-if="store.favorites.length > 1 || store.loadingSearch"
     class="w-full container flex-col flex gap-2 items-center will-change-scroll justify-center pb-4"
     :style="headerStyle"
   >
@@ -52,6 +53,7 @@ onMounted(async () => {
       }}
     </h2>
   </div>
+
   <div
     ref="scroller"
     class="w-full flex flex-col scroll-py-2 items-center justify-start bg-slate-50/50 gap-3 flex-1 h-full overflow-auto p-3 pl-3s scrollbar-mobile rounded-3xl border-y-8 border-slate-100"
@@ -61,7 +63,15 @@ onMounted(async () => {
       :key="value.id"
       :city="value"
       module="now-status"
-    />
+    >
+      <template #actions
+        ><button
+          @click="store.toggleFavorite(value)"
+          class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
+        >
+          <TrashIcon class="size-5 text-rose-600" /></button
+      ></template>
+    </BaseCityCard>
     <div
       class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
       v-if="store.favorites.length < 1 && !store.loadingSearch"
