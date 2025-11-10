@@ -10,7 +10,18 @@ const store = useWeatherStore()
 
 const el = useTemplateRef('scroller')
 
-const { height } = useScrollShrink(el, 200, 100, 600)
+enum HomePageScrollShrinks {
+  MAX_HEIGHT = 250,
+  MIN_HEIGHT = 90,
+  MAX_SCROLL = 600,
+}
+
+const { height } = useScrollShrink(
+  el,
+  HomePageScrollShrinks.MAX_HEIGHT,
+  HomePageScrollShrinks.MIN_HEIGHT,
+  HomePageScrollShrinks.MAX_SCROLL,
+)
 
 const headerStyle = computed(() => ({
   height: height.value ? height.value.toFixed(2) + 'px' : '100%',
@@ -32,7 +43,7 @@ onMounted(async () => {
 
 <template>
   <div
-    v-if="store.favorites.length > 1 || store.loadingSearch"
+    v-if="store.favorites.length > 0"
     class="w-full container flex-col flex gap-2 items-center will-change-scroll justify-center pb-4"
     :style="headerStyle"
   >
