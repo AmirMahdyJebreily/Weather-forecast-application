@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { MapPinIcon } from '@heroicons/vue/24/solid'
-import type { City } from '@/stores/weather'
+import { classifySettlement, type City } from '@/stores/weather'
 import { defineAsyncComponent, ref } from 'vue'
 
 const props = withDefaults(
@@ -39,12 +39,16 @@ if (props.module && props.module.length) {
         >
           <MapPinIcon class="size-5 inline-block m-auto" />
         </span>
-        <p class="pt-0.5 text-xl flex items-center justify-start w-full gap-1">
-          {{ props.city.name }}
+        <p class="pt-0.5 text-xl line-clamp-1 flex items-center justify-start w-full gap-1">
+          <span class="flex-none"> {{ props.city.name }}، </span>
           <span
-            :class="`text-gray-500 flex-none text-ellipsis text-nowrap overflow-hidden transition-[width] ease-out duration-700 ${showCityInfo ? 'w-full' : 'w-7'}`"
+            :class="`text-gray-500 font-light text-lg flex-none text-ellipsis text-nowrap overflow-hidden transition-[width] ease-out duration-700 ${showCityInfo ? 'w-full' : 'w-7'}`"
           >
-            {{ showCityInfo ? `${props.city.admin1}, ${props.city.country}` : '...' }}
+            {{
+              showCityInfo
+                ? `${classifySettlement(props.city.population!)} در ${props.city.admin1}, ${props.city.country}`
+                : '...'
+            }}
           </span>
         </p>
       </span>

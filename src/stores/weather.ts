@@ -349,6 +349,37 @@ export function temperatureAt(
   return getHourlyValueFromSimple(simple, param, paramDate, interpolate)
 }
 
+
+export enum SettlementLevel {
+  Country = 'کشور',
+  Province = 'استان (ایالت)',
+  Metropolis = 'کلان‌شهر',
+  City = 'شهر',
+  Village = 'روستا',
+}
+
+interface Threshold {
+  level: SettlementLevel;
+  min: number;
+  max: number;
+}
+
+const thresholds: readonly Threshold[] = [
+  { level: SettlementLevel.Village, min: 100, max: 4_999 },
+  { level: SettlementLevel.City, min: 5_000, max: 249_999 },
+  { level: SettlementLevel.Metropolis, min: 250_000, max: Number.POSITIVE_INFINITY },
+  { level: SettlementLevel.Province, min: 600_000, max: 15_000_000 },
+  { level: SettlementLevel.Country, min: 15_000_001, max: Number.POSITIVE_INFINITY },
+];
+
+export function classifySettlement(population: number): SettlementLevel {
+  const entry = thresholds.find(t => population >= t.min && population <= t.max);
+  if (!entry) {
+    return SettlementLevel.Village
+  }
+  return entry.level;
+}
+
 /* ================= Store implementation ======== */
 
 export const useWeatherStore = defineStore('weather', () => {
@@ -456,7 +487,7 @@ export const useWeatherStore = defineStore('weather', () => {
     return Array.from(variants)
   }
 
-  async function searchCities(query: string, limit = 10, language = 'en') {
+  async function searchCities(query: string, limit = 20, language = 'fa') {
     if (!query || query.trim().length === 0) {
       searchResults.value = []
       return []
