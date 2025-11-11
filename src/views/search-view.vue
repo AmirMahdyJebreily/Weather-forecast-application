@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useWeatherStore, type City } from '@/stores/weather'
+import { SettlementLevel, useWeatherStore, type City } from '@/stores/weather'
 import { GlobeAsiaAustraliaIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 import { computed, nextTick, ref, toRaw } from 'vue'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
@@ -10,6 +10,8 @@ const loading = ref<boolean>(false)
 const store = useWeatherStore()
 
 const searchCity = ref<string>('')
+
+const searchLevel = ref<SettlementLevel | undefined>(undefined)
 
 const cityToFavorites = ref<Array<City>>([])
 
@@ -26,6 +28,11 @@ function toggleFavorite(city: City) {
   } else {
     cityToFavorites.value.splice(idx, 1)
   }
+}
+
+function handelLevelClick(value: string) {
+  searchLevel.value = value === 'همه' ? undefined : (value as SettlementLevel)
+  Search()
 }
 
 async function confirm() {
@@ -46,7 +53,7 @@ async function Search() {
   if (debounceTimer) clearTimeout(debounceTimer)
 
   debounceTimer = setTimeout(async () => {
-    await store.searchCities(searchCity.value)
+    await store.searchCities(searchCity.value, 20, 'fa-IR', searchLevel.value)
     await nextTick()
     loading.value = false
   }, 700)
@@ -83,23 +90,39 @@ async function startEventLeastener() {
 </script>
 
 <template>
-  <div class="flex items-start justify-start flex-col h-full w-full overflow-hidden">
-    <div class="w-full flex items-center justify-center gap-1 mb-4 border-b-2 border-b-slate-300">
-      <MagnifyingGlassIcon class="size-6 flex-none" />
+  <div class="flex items-center justify-start flex-col h-full w-full overflow-hidden px-2">
+    <div
+      class="flex w-full focus-within:text-sky-700 items-center justify-center gap-1 px-4 bg-slate-300/50 rounded-2xl"
+    >
+      <MagnifyingGlassIcon class="size-6 flex-none transition-[color] duration-200" />
       <input
         type="search"
-        class="w-full h-full bg-transparent py-3 px-2 outline-none"
+        class="w-full h-full bg-transparent py-3 px-2 outline-none text-slate-500"
         placeholder="جستجو میان مکان های سراسر جهان..."
         v-model="searchCity"
         @update:model-value="Search"
       />
     </div>
 
+    <div class="flex items-center justify-start w-full overflow-auto mb-4 mt-2 p-1 gap-2">
+      <span
+        v-for="(value, idx) in ['همه', ...Object.values(SettlementLevel)]"
+        :key="idx"
+        @click="handelLevelClick(value, idx)"
+        class="bg-slate-300/80 text-slate-700 cursor-pointer px-3 py-1 rounded-full flex-none"
+        :class="{
+          'bg-slate-800 text-slate-300 transition-colors duration-150':
+            (!searchLevel && idx === 0) || (searchLevel && searchLevel === value),
+        }"
+        >{{ value }}</span
+      >
+    </div>
+
     <TransitionGroup
       name="list"
       tag="div"
       @vue:mounted="startEventLeastener"
-      class="w-full scroller flex flex-col items-center justify-start gap-2 flex-1 h-full overflow-auto p-2 pl-3 scrollbar-mobile rounded-3xl"
+      class="w-full scroller flex flex-col items-center justify-start gap-3 flex-1 h-full overflow-auto scrollbar-mobile rounded-3xl"
     >
       <BaseCityCard
         :info-hidable="false"
@@ -107,7 +130,7 @@ async function startEventLeastener() {
         v-for="(value, index) in reorderedCities"
         :key="'srchres' + value.id"
         @click="toggleFavorite(value)"
-        :class="`flex items-center justify-between w-full transition-all duration-150 ${includesFavorite(value) > -1 ? '!border-sky-400 !border-r !bg-slate-300 !shadow-slate-400 !text-sky-950' : ''}`"
+        :class="`flex items-center cursor-pointer justify-between w-full transition-all shadow-none duration-150 ${includesFavorite(value) > -1 ? '!border-sky-400 !border-r !bg-slate-300 !text-sky-950' : ''}`"
         :style="{ transitionDelay: `${index * 25}ms` }"
       />
       <template v-if="loading">

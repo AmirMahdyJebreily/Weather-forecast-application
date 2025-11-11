@@ -77,13 +77,14 @@
     font-display: swap;
   }
 
-
   body {
     font-family: 'Vazirmatn', sans-serif;
   }
 
   .scrollbar-mobile::-webkit-scrollbar {
-    width: 4px;
+    position: relative;
+    right: 20px;
+    width: 2px;
     /* ثابت */
     height: 4px;
     /* ثابت */
@@ -111,9 +112,8 @@
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     scrollbar-color: rgba(100, 116, 139, 0) transparent;
-    transition: scrollbar-color 0.3s ease;
+    transition: scrollbar-color 1s ease;
     touch-action: pan-y;
-
   }
 
   .scrollbar-visible {

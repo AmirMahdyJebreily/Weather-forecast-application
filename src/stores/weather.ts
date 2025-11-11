@@ -487,7 +487,7 @@ export const useWeatherStore = defineStore('weather', () => {
     return Array.from(variants)
   }
 
-  async function searchCities(query: string, limit = 20, language = 'fa') {
+  async function searchCities(query: string, limit = 20, language = 'fa', level?: SettlementLevel) {
     if (!query || query.trim().length === 0) {
       searchResults.value = []
       return []
@@ -536,6 +536,8 @@ export const useWeatherStore = defineStore('weather', () => {
           population: r.population
         } as City))
         .filter((c, idx) => {
+          if (level && classifySettlement(c.population!) !== level) return false
+          if (!c.admin1) return false
           if (!containsPersian) return true
           const r = rawResults[idx]!
           const nameLower = (r.name ?? '').toLowerCase()
@@ -545,6 +547,8 @@ export const useWeatherStore = defineStore('weather', () => {
           const candidates = [nameLower, ...localNames.map((x) => x.toLowerCase())]
           return variantsToMatch.some((v) => candidates.some((s) => s.includes(v)))
         })
+        .sort((a, b) => (a.country === 'Iran' ? -1 : b.country === 'Iran' ? 1 : 0))
+
 
       searchResults.value = results
       return results
