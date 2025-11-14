@@ -117,7 +117,7 @@ header {
 .header-time {
   font-size: 1rem;
   transition:
-    font-size 0.15s ease,
+    font-size 0.2s ease,
     margin 0.25s ease;
 }
 
