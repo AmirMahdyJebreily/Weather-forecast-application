@@ -14,7 +14,7 @@ export function useScrollShrink<T extends HTMLElement>(
 
     const scrollY = targetRef.value.scrollTop
 
-    if (scrollY < Math.ceil(maxScroll / 10)) return
+    if (scrollY < Math.ceil(maxScroll / 5)) return
     const ratio = Math.min(scrollY / maxScroll, 1)
     height.value = maxHeight - (maxHeight - minHeight) * ratio
   }
