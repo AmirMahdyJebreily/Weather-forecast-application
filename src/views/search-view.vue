@@ -53,7 +53,7 @@ async function Search() {
   if (debounceTimer) clearTimeout(debounceTimer)
 
   debounceTimer = setTimeout(async () => {
-    await store.searchCities(searchCity.value, 20, 'fa-IR', searchLevel.value)
+    await store.searchCities(searchCity.value, 20, 'fa', searchLevel.value)
     await nextTick()
     loading.value = false
   }, 700)
@@ -111,7 +111,7 @@ async function startEventLeastener() {
         @click="handelLevelClick(value)"
         class="bg-slate-300/80 text-slate-700 cursor-pointer px-3 py-1 rounded-full flex-none"
         :class="{
-          'bg-slate-800 text-slate-300 transition-colors duration-150':
+          'bg-slate-800 !text-slate-300 transition-colors duration-150':
             (!searchLevel && idx === 0) || (searchLevel && searchLevel === value),
         }"
         >{{ value }}</span
