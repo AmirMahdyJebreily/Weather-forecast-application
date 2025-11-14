@@ -5,14 +5,16 @@ export function useScrollShrink<T extends HTMLElement>(
   targetRef: ShallowRef<T | null>,
   maxHeight: number,
   minHeight: number,
-  maxScroll = 500
+  maxScroll = (maxHeight + minHeight) / 4
 ) {
   const height = ref(maxHeight)
 
   const onScroll = () => {
     if (!targetRef.value) return
-    debugger
+
     const scrollY = targetRef.value.scrollTop
+
+    if (scrollY < Math.ceil(maxScroll / 10)) return
     const ratio = Math.min(scrollY / maxScroll, 1)
     height.value = maxHeight - (maxHeight - minHeight) * ratio
   }

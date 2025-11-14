@@ -110,14 +110,14 @@ header {
 .header-title {
   font-size: 1.5rem; /* برای ارتفاع کم */
   transition:
-    font-size 0.2s ease,
-    margin 0.2s ease;
+    font-size 0.15s ease,
+    margin 0.25s ease;
 }
 
 .header-time {
   font-size: 1rem;
   transition:
-    font-size 0.2s ease,
+    font-size 0.15s ease,
     margin 0.25s ease;
 }
 
