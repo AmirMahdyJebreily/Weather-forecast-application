@@ -11,9 +11,9 @@ const store = useWeatherStore()
 const el = useTemplateRef('scroller')
 
 enum HomePageScrollShrinks {
-  MAX_HEIGHT = 250,
-  MIN_HEIGHT = 90,
-  MAX_SCROLL = 600,
+  MAX_HEIGHT = 200,
+  MIN_HEIGHT = 75,
+  MAX_SCROLL = 100,
 }
 
 const { height } = useScrollShrink(
@@ -42,13 +42,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div
+  <header
     v-if="store.favorites.length > 0"
     class="w-full container flex-col flex gap-2 items-center will-change-scroll justify-center pb-4"
     :style="headerStyle"
   >
-    <h1 class="text-3xl font-extrabold text-slate-700">هوا چطوره ؟</h1>
-    <h2 class="text-xl font-medium text-slate-600">
+    <h1
+      class="header-title text-2xl sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
+    >
+      هوا چطوره ؟
+    </h1>
+    <h2
+      class="header-time text-lg sm:text-xl font-medium text-slate-600 [container-type:height] [&:container(height>150px)]:text-2xl [&:container(height>200px)]:text-3xl"
+    >
       {{
         new Date().toLocaleDateString('fa-IR', {
           weekday: 'long',
@@ -63,11 +69,11 @@ onMounted(async () => {
         })
       }}
     </h2>
-  </div>
+  </header>
 
   <div
     ref="scroller"
-    class="w-full flex flex-col scroll-py-2 items-center justify-start bg-slate-50/50 gap-3 flex-1 h-full overflow-auto p-3 pl-3s scrollbar-mobile rounded-3xl border-y-8 border-slate-100"
+    class="w-full flex flex-col scroll-py-2 items-center justify-start bg-gray-200 gap-3 flex-1 h-full overflow-auto p-4 scrollbar-mobile rounded-3xl border-8 border-slate-200"
   >
     <BaseCityCard
       v-for="value in store.favorites"
@@ -104,3 +110,58 @@ onMounted(async () => {
     </RouterLink>
   </div>
 </template>
+
+<style lang="css" scoped>
+/* ابتدا کانتینر را تعریف می‌کنیم */
+header {
+  container-type: size; /* حتما باید این را داشته باشیم تا container query فعال شود */
+}
+
+/* استایل پیش‌فرض برای h1 و h2 */
+.header-title {
+  font-size: 1.5rem; /* برای ارتفاع کم */
+  transition:
+    font-size 0.2s ease,
+    margin 0.2s ease;
+}
+
+.header-time {
+  font-size: 1rem;
+  transition:
+    font-size 0.2s ease,
+    margin 0.2s ease;
+}
+
+/* وقتی ارتفاع container حداقل 100px باشد */
+@container (min-height: 100px) {
+  .header-title {
+    font-size: 2rem;
+  }
+
+  .header-time {
+    font-size: 1.25rem;
+  }
+}
+
+/* وقتی ارتفاع container حداقل 150px باشد */
+@container (min-height: 150px) {
+  .header-title {
+    font-size: 2.5rem;
+  }
+
+  .header-time {
+    font-size: 1.5rem;
+  }
+}
+
+/* وقتی ارتفاع container حداقل 200px باشد */
+@container (min-height: 200px) {
+  .header-title {
+    font-size: 3rem;
+  }
+
+  .header-time {
+    font-size: 1.75rem;
+  }
+}
+</style>
