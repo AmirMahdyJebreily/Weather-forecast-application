@@ -11,6 +11,7 @@ export type City = {
   id: string
   name: string
   country?: string
+  country_code: string
   latitude: number
   longitude: number
   admin1?: string
@@ -375,7 +376,7 @@ const thresholds: readonly Threshold[] = [
 export function classifySettlement(population: number): SettlementLevel {
   const entry = thresholds.find(t => population >= t.min && population <= t.max);
   if (!entry) {
-    return SettlementLevel.Village
+    return SettlementLevel.City
   }
   return entry.level;
 }
@@ -452,10 +453,10 @@ export const useWeatherStore = defineStore('weather', () => {
 
   /* ===== Geocoding / search (Persian-aware) ===== */
 
-  async function fetchGeocoding(q: string, limit = 10, language = 'en', signal?: AbortSignal) {
-    const url = `${GEOCODING_BASE}?name=${encodeURIComponent(q)}&count=${limit}&language=${language}`
+  async function fetchGeocoding(q: string, limit = 10, language = 'en', signal?: AbortSignal, country?: string) {
+    const url = `${GEOCODING_BASE}?name=${encodeURIComponent(q)}&count=${limit}&language=${language}${(country) ? '&country=' + country : ''}`
     const res = await fetch(url, { signal })
-    if (!res.ok) throw new Error(`geocoding failed: ${res.status}`)
+    if (!res.ok) throw new Error(`geocoding failed: ${res.status} `)
     return (await res.json()) as GeocodingResponse
   }
 
@@ -488,6 +489,7 @@ export const useWeatherStore = defineStore('weather', () => {
   }
 
   async function searchCities(query: string, limit = 20, language = 'fa', level?: SettlementLevel) {
+
     if (!query || query.trim().length === 0) {
       searchResults.value = []
       return []
@@ -506,10 +508,14 @@ export const useWeatherStore = defineStore('weather', () => {
       const json = await fetchGeocoding(query, limit, preferredLang, ac.signal)
       let rawResults: GeocodingResultItem[] = json.results ?? []
 
+      // fallback: try a few variants but cap the number of variant fetches to avoid worst-case network storm
       if (rawResults.length === 0 && containsPersian) {
         const variants = generatePersianVariants(query)
+        const MAX_VARIANT_FETCH = 5
+        let tries = 0
         for (const v of variants) {
           if (v === query) continue
+          if (++tries > MAX_VARIANT_FETCH) break
           try {
             const r2 = await fetchGeocoding(v, limit, preferredLang, ac.signal)
             rawResults = r2.results ?? []
@@ -520,35 +526,90 @@ export const useWeatherStore = defineStore('weather', () => {
         }
       }
 
-      const variantsToMatch = containsPersian
-        ? generatePersianVariants(query).map((s) => s.toLowerCase())
+      // prepare variants to match (normalized once)
+      const variantsToMatch: string[] = containsPersian
+        ? generatePersianVariants(query).map((s) => normalizePersian(s))
         : [query.toLowerCase()]
 
-      const results: City[] = (rawResults ?? [])
-        .map((r) => ({
+      // single-pass: build iran-first and others arrays while filtering + mapping
+      const iranFirst: City[] = []
+      const others: City[] = []
+
+      for (let i = 0; i < (rawResults ?? []).length; i++) {
+        const r = rawResults![i]!
+        // drop if no admin1
+        if (!r.admin1) continue
+
+        // drop if level provided but population missing or not matching
+        if (level) {
+          if (r.population == null) continue
+          try {
+            if (classifySettlement(r.population) !== level) continue
+          } catch {
+            // if classifySettlement throws for any reason, skip the record safely
+            continue
+          }
+        }
+
+        // if not Persian-mode, accept immediately (fast path)
+        if (!containsPersian) {
+          const cityObj: City = {
+            id: cityIdFrom(r.latitude, r.longitude, r.name),
+            name: r.name,
+            country: r.country,
+            country_code: r.country_code,
+            latitude: r.latitude,
+            longitude: r.longitude,
+            admin1: r.admin1,
+            timezone: r.timezone,
+            population: r.population
+          } as City
+
+          if (cityObj.country_code === 'IR') iranFirst.push(cityObj)
+          else others.push(cityObj)
+
+          continue
+        }
+
+        // Persian-mode: try to match name / local_names / alternative_names with early exits
+        const primary = normalizePersian(r.name)
+        let matched = variantsToMatch.some((v) => primary.includes(v))
+        if (!matched && r.local_names) {
+          // iterate local names lazily and stop on first match
+          const values = Object.values(r.local_names)
+          for (let j = 0; j < values.length && !matched; j++) {
+            const ln = normalizePersian(String(values[j]))
+            if (variantsToMatch.some((v) => ln.includes(v))) matched = true
+          }
+        }
+
+        if (!matched && r.alternative_names) {
+          for (let j = 0; j < r.alternative_names.length && !matched; j++) {
+            const an = normalizePersian(String(r.alternative_names[j]))
+            if (variantsToMatch.some((v) => an.includes(v))) matched = true
+          }
+        }
+
+        if (!matched) continue
+
+        // matched: map and push to appropriate partition
+        const cityObj: City = {
           id: cityIdFrom(r.latitude, r.longitude, r.name),
           name: r.name,
           country: r.country,
+          country_code: r.country_code,
           latitude: r.latitude,
           longitude: r.longitude,
           admin1: r.admin1,
           timezone: r.timezone,
           population: r.population
-        } as City))
-        .filter((c, idx) => {
-          if (level && classifySettlement(c.population!) !== level) return false
-          if (!c.admin1) return false
-          if (!containsPersian) return true
-          const r = rawResults[idx]!
-          const nameLower = (r.name ?? '').toLowerCase()
-          const localNames: string[] = []
-          if (r.local_names) localNames.push(...Object.values(r.local_names))
-          if (r.alternative_names) localNames.push(...r.alternative_names)
-          const candidates = [nameLower, ...localNames.map((x) => x.toLowerCase())]
-          return variantsToMatch.some((v) => candidates.some((s) => s.includes(v)))
-        })
-        .sort((a, b) => (a.country === 'Iran' ? -1 : b.country === 'Iran' ? 1 : 0))
+        } as City
 
+        if (cityObj.country_code === 'IR') iranFirst.push(cityObj)
+        else others.push(cityObj)
+      }
+
+      const results: City[] = iranFirst.length > 0 ? iranFirst.concat(others) : others
 
       searchResults.value = results
       return results
@@ -562,6 +623,8 @@ export const useWeatherStore = defineStore('weather', () => {
       inFlightSearchAbort.value = null
     }
   }
+
+
 
   /* ===== Forecast / cache (uses typed ForecastResponse) ===== */
 
@@ -609,7 +672,7 @@ export const useWeatherStore = defineStore('weather', () => {
     if (opts?.start) params.set('start_date', opts.start)
     if (opts?.end) params.set('end_date', opts.end)
     if (typeof opts?.forecast_days === 'number') params.set('forecast_days', String(opts.forecast_days))
-    return `${FORECAST_BASE}?${params.toString()}`
+    return `${FORECAST_BASE}?${params.toString()} `
   }
 
   function cacheKeyFor(city: City) {
@@ -646,7 +709,7 @@ export const useWeatherStore = defineStore('weather', () => {
       try {
         const url = buildForecastUrl(city.latitude, city.longitude, { timezone: city.timezone ?? 'auto' })
         const res = await fetch(url)
-        if (!res.ok) throw new Error(`forecast failed: ${res.status}`)
+        if (!res.ok) throw new Error(`forecast failed: ${res.status} `)
         const json = (await res.json()) as ForecastResponse
 
         const payload: WeatherData = {
