@@ -81,32 +81,6 @@
     font-family: 'Vazirmatn', sans-serif;
   }
 
-  .scrollbar-mobile::-webkit-scrollbar {
-    position: relative;
-    right: 20px;
-    width: 2px;
-    /* ثابت */
-    height: 4px;
-    /* ثابت */
-  }
-
-  .scrollbar-mobile::-webkit-scrollbar-thumb {
-    background-color: rgba(100, 116, 139, 0);
-    /* ابتدا مخفی */
-    border-radius: 9999px;
-    transition: background-color 0.3s ease;
-  }
-
-  .scrollbar-visible::-webkit-scrollbar-thumb {
-    background-color: rgba(100, 116, 139, 0.5);
-    /* هنگام visible */
-  }
-
-  .scrollbar-mobile::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  /* Firefox */
   .scrollbar-mobile {
     scrollbar-width: thin;
     scroll-behavior: smooth;
@@ -114,9 +88,5 @@
     scrollbar-color: rgba(100, 116, 139, 0) transparent;
     transition: scrollbar-color 1s ease;
     touch-action: pan-y;
-  }
-
-  .scrollbar-visible {
-    scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
   }
 }

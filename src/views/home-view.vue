@@ -31,7 +31,7 @@ const headerStyle = computed(() => ({
 <template>
   <header
     v-if="store.favorites.length > 0"
-    class="w-full container flex-col flex gap-2 items-center will-change-scroll justify-center"
+    class="w-full container flex-col flex gap-2 mobilpe scrollbar-mobile items-center will-change-scroll justify-center"
     :style="headerStyle"
   >
     <div
