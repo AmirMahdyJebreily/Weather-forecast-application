@@ -25,9 +25,9 @@ const route = useRoute()
       </transition>
     </router-view>
 
-    <footer class="text-slate-500 text-sm flex items-end justify-center">
+    <!-- <footer class="text-slate-500 text-sm flex items-end justify-center">
       &copy; صنایع خلاق نسیم مهر 1404
-    </footer>
+    </footer> -->
   </main>
 </template>
 
@@ -54,6 +54,6 @@ const route = useRoute()
   @apply w-full pb-4 pt-2 flex items-center justify-between flex-none;
 }
 .app-container {
-  @apply w-full max-h-dvh h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gradient-to-t from-slate-100 via-slate-100/50 to-slate-100 font-vazir gap-1;
+  @apply w-full max-h-dvh h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gray-100 font-vazir gap-1;
 }
 </style>
