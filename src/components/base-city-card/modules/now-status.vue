@@ -112,7 +112,7 @@ function getWeatherIconUrl(code: number, date: Date): string {
     <div class="flex flex-col items-start justify-start h-full py-1">
       <span class="flex items-end justify-start px-2 py-1.5 gap-1">
         <p class="text-sky-700 font-semibold mb-1">C°</p>
-        <p class="font-black text-5xl text-slate-500/90">
+        <p class="font-black text-5xl text-slate-800">
           {{ tempereture.toFixed(1) }}
         </p>
       </span>
@@ -121,7 +121,7 @@ function getWeatherIconUrl(code: number, date: Date): string {
         <span class="now-status-badges">
           <p class="text-sm font-medium">%</p>
           <p class="font-semibold text-center">{{ humidity }}</p>
-          <HumidityIcon class="size-5 fill-current flex-none mx-1.5" />
+          <HumidityIcon class="w-5 h-5 fill-current text-slate-700 flex-none mx-1.5" />
         </span>
         <span class="now-status-badges">
           <p class="text-sm font-medium mx-0.5">KM/H</p>
@@ -136,5 +136,12 @@ function getWeatherIconUrl(code: number, date: Date): string {
 <style lang="css" scoped>
 .now-status-badges {
   @apply flex items-center justify-center flex-none;
+}
+/* replace tailwind @apply with plain CSS to avoid linter issues */
+.now-status-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
 }
 </style>

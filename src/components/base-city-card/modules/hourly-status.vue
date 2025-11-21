@@ -172,7 +172,7 @@ onMounted(async () => {
           <div
             v-for="(h, idx) in hours"
             :key="h.time + '-' + idx"
-            class="hour-card w-28 flex-shrink-0 bg-white/70 rounded-xl p-3 text-center shadow"
+            class="hour-card w-28 flex-shrink-0 bg-white rounded-xl p-3 text-center shadow"
             :class="{ 'current-card': idx === currentVisibleIdx }"
             :data-visible-idx="idx"
           >
@@ -189,11 +189,15 @@ onMounted(async () => {
               "
               :alt="mapWeatherCodeToFarsi((h.values.weathercode ?? 0) as number).title"
             />
-            <p class="text-2xl font-semibold text-slate-600">
+            <p class="text-2xl font-semibold text-slate-800">
               {{ (h.values.temperature_2m ?? 0).toFixed(0) }}°
             </p>
             <p class="text-xs text-gray-500 flex items-center justify-center gap-1">
-              <HumidityIcon class="inline-block w-3 h-3 mr-1" role="img" aria-label="رطوبت" />
+              <HumidityIcon
+                class="inline-block w-4 h-4 fill-current text-slate-700 mr-1"
+                role="img"
+                aria-label="رطوبت"
+              />
               {{ h.values.relativehumidity_2m ?? '-' }}%
             </p>
           </div>

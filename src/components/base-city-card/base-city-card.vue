@@ -44,7 +44,7 @@ if (props.modulesRaw && props.modulesRaw.length) {
         <p class="pt-0.5 text-xl line-clamp-1 flex items-center justify-start w-full gap-1">
           <span class="flex-none"> {{ props.city.name }}، </span>
           <span
-            :class="`text-gray-500 font-light text-sm flex-none text-ellipsis text-nowrap overflow-hidden transition-[width] ease-out duration-700 ${showCityInfo ? 'w-full' : 'w-7'}`"
+            :class="`text-slate-600 font-light text-sm flex-none text-ellipsis text-nowrap overflow-hidden transition-[width] ease-out duration-700 ${showCityInfo ? 'w-full' : 'w-7'}`"
           >
             {{
               showCityInfo
