@@ -14,8 +14,8 @@ const store = useWeatherStore()
 const el = useTemplateRef('scroller')
 
 enum HomePageScrollShrinks {
-  MAX_HEIGHT = 230,
-  MIN_HEIGHT = 70,
+  MAX_HEIGHT = 190,
+  MIN_HEIGHT = 60,
   MAX_SCROLL = (MAX_HEIGHT + MIN_HEIGHT) / 4,
 }
 
@@ -112,7 +112,7 @@ watch(expandedCityId, async (id) => {
 
 <template>
   <header
-    class="w-dvw transition-[height] py-5 ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-center"
+    class="w-dvw transition-[height] pt-8 ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-end"
     :style="{ ...headerStyle, willChange: 'scroll-position' }"
   >
     <div
