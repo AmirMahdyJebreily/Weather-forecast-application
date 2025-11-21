@@ -7,7 +7,7 @@ const route = useRoute()
 
 <template>
   <main dir="rtl" class="app-container">
-    <section class="app-bar">
+    <section v-if="route.name != 'home'" class="app-bar">
       <BackButton />
       <h1 class="text-slate-500 font-semibold text-lg w-full text-center">
         {{ route.meta.title ?? 'هوا چطوره؟' }}

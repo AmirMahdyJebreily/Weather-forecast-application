@@ -169,7 +169,7 @@ function getWeatherIconUrl(code: number, date: Date): string {
       <!-- <SunIcon class="size-10 flex-none text-sky-700" /> -->
       <span class="flex items-center justify-center flex-col flex-none relative -top-2 left-2">
         <img
-          class="object-center object-contain rounded-xl brightness-100 relative bottom-2"
+          class="object-center object-contain rounded-xl brightness-100 relative bottom-1"
           :src="getWeatherIconUrl(weatherCode, new Date())"
         />
         <p class="text-sm text-sky-700">{{ mapWeatherCodeToFarsi(weatherCode).title }}</p>

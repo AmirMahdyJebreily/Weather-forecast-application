@@ -150,7 +150,8 @@ watch(
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
+  padding-top: 0.5rem;
   padding-inline: 0.5rem; /* give breathing room on edges */
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;

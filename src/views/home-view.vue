@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useTemplateRef, ref } from 'vue'
+import { computed, useTemplateRef, ref, watch, nextTick } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import type { City } from '@/stores/weather'
@@ -33,6 +33,9 @@ const headerStyle = computed(() => ({
 /* modal state for delete confirmation */
 const modalVisible = ref(false)
 const modalCity = ref<City | null>(null)
+const expandedCityId = ref<string | null>(null)
+const NOW_ONLY: string[] = ['now-status']
+const NOW_AND_HOURLY: string[] = ['now-status', 'hourly-status']
 
 function requestDelete(city: City) {
   modalCity.value = city
@@ -46,11 +49,70 @@ function confirmDelete() {
   modalCity.value = null
   modalVisible.value = false
 }
+
+function toggleExpand(cityId: string) {
+  expandedCityId.value = expandedCityId.value === cityId ? null : cityId
+}
+
+// double-tap detection for touch devices and dblclick for mouse
+let lastTap = 0
+let lastTapId: string | null = null
+let touchStartX = 0
+let touchStartY = 0
+let lastTouchToggle = 0
+
+function onCardTouchStart(e: TouchEvent) {
+  const t = e.touches && e.touches[0]
+  if (!t) return
+  touchStartX = t.clientX
+  touchStartY = t.clientY
+}
+
+function onCardTouchEnd(e: TouchEvent, id: string) {
+  const t = e.changedTouches && e.changedTouches[0]
+  if (!t) return
+  const dx = Math.abs(t.clientX - touchStartX)
+  const dy = Math.abs(t.clientY - touchStartY)
+  const MOVE_TH = 10
+  if (dx > MOVE_TH || dy > MOVE_TH) {
+    // treat as scroll/drag, ignore
+    lastTap = 0
+    lastTapId = null
+    return
+  }
+  const now = Date.now()
+  if (lastTapId === id && now - lastTap < 350) {
+    // double tap
+    toggleExpand(id)
+    lastTap = 0
+    lastTapId = null
+    lastTouchToggle = Date.now()
+  } else {
+    lastTap = now
+    lastTapId = id
+  }
+}
+
+function onCardDblClick(id: string) {
+  // desktop double-click support. ignore if a touch double-tap just toggled.
+  if (Date.now() - lastTouchToggle < 600) return
+  toggleExpand(id)
+}
+
+// when a card expands, scroll it into view vertically (centered)
+watch(expandedCityId, async (id) => {
+  await nextTick()
+  if (!id) return
+  const el = document.querySelector(`[data-card-id="${id}"]`) as HTMLElement | null
+  if (!el) return
+  // scroll the card into center of viewport smoothly
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+})
 </script>
 
 <template>
   <header
-    class="w-dvw transition-[height] ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-center"
+    class="w-dvw transition-[height] py-5 ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-center"
     :style="{ ...headerStyle, willChange: 'scroll-position' }"
   >
     <div
@@ -70,21 +132,41 @@ function confirmDelete() {
     class="w-full flex flex-col scroll-py-2 items-center justify-start bg-gray-50 gap-3 flex-1 h-full overflow-auto px-2 py-5 rounded-3xl border border-gray-200"
   >
     <transition-group name="fav" tag="div" class="w-full flex flex-col gap-3">
-      <BaseCityCard
+      <div
         v-for="value in store.favorites"
         :key="value.id"
-        :city="value"
-        :modules-raw="['now-status', 'hourly-status']"
+        class="card-wrapper"
+        :data-card-id="value.id"
       >
-        <template #actions
-          ><button
-            @click="requestDelete(value)"
-            class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
+        <div
+          class="w-full"
+          @touchstart.passive="onCardTouchStart"
+          @touchend.passive="(e) => onCardTouchEnd(e, value.id)"
+          @dblclick.prevent="() => onCardDblClick(value.id)"
+          :aria-expanded="expandedCityId === value.id"
+        >
+          <BaseCityCard
+            :city="value"
+            :modules-raw="expandedCityId === value.id ? NOW_AND_HOURLY : NOW_ONLY"
           >
-            <TrashIcon class="size-5 text-rose-600" /></button
-        ></template>
-      </BaseCityCard>
+            <template #actions>
+              <button
+                @click.stop="requestDelete(value)"
+                class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
+              >
+                <TrashIcon class="size-5 text-rose-600" />
+              </button>
+            </template>
+          </BaseCityCard>
+        </div>
+      </div>
     </transition-group>
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
     <div
       class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
       v-if="store.favorites.length < 1 && !store.loadingSearch"

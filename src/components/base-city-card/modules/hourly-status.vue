@@ -3,6 +3,7 @@ import { ref, onMounted, nextTick, watch } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { useWeatherStore, type City, type SimpleHourlyPoint } from '@/stores/weather'
 import HumidityIcon from '../../../../public/icons/humidity-svgrepo-com.svg'
+import { ClockIcon } from '@heroicons/vue/24/outline'
 
 const props = withDefaults(
   defineProps<{
@@ -203,11 +204,16 @@ onMounted(async () => {
             :class="{ 'current-card': idx === currentVisibleIdx }"
             :data-visible-idx="idx"
           >
-            <p class="text-xs text-gray-500 mb-1">
-              {{ formatHour(h.timeParsed ?? new Date(h.time), props.city.timezone) }}
+            <p
+              class="flex items-center justify-center text-sm font-bold text-gray-500 bg-slate-400/20 w-2/3 rounded-3xl py-0.5 mb-1 gap-1"
+            >
+              <span class="pt-0.5">{{
+                formatHour(h.timeParsed ?? new Date(h.time), props.city.timezone).toString()
+              }}</span>
+              <ClockIcon class="size-4" />
             </p>
             <img
-              class="mx-auto w-12 h-12 mb-1"
+              class="mx-auto size-8 mb-1"
               :src="
                 getWeatherIconUrl(
                   (h.values.weathercode ?? 0) as number,
@@ -248,7 +254,7 @@ onMounted(async () => {
   gap: 0.25rem;
 }
 .hour-card.current-card {
-  border: 2px solid rgba(14, 165, 233, 0.9); /* sky-500 */
+  border: 2px solid rgba(14, 164, 233, 0.219); /* sky-500 */
   box-shadow: 0 4px 14px rgba(14, 165, 233, 0.12);
 }
 /* hide default scrollbar on webkit but keep scroll functionality */

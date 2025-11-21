@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { MapPinIcon } from '@heroicons/vue/24/solid'
 import { classifySettlement, type City } from '@/stores/weather'
-import { defineAsyncComponent, ref } from 'vue'
+import { defineAsyncComponent, ref, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -14,7 +14,7 @@ const props = withDefaults(
   },
 )
 
-const modules: Array<object> = []
+const modules = ref<Array<object>>([])
 
 const showCityInfo = ref<boolean>(!props.infoHidable)
 
@@ -25,10 +25,67 @@ function toggleShowCityInfo() {
   showCityInfo.value = !showCityInfo.value
 }
 
-if (props.modulesRaw && props.modulesRaw.length) {
-  for (const moduleName of props.modulesRaw) {
-    modules.push(defineAsyncComponent(() => import(`./modules/${moduleName}.vue`)))
+function rebuildModules(list?: string[] | undefined) {
+  modules.value = []
+  const arr = list ?? props.modulesRaw
+  if (!arr || !arr.length) return
+  for (const moduleName of arr) {
+    modules.value.push(defineAsyncComponent(() => import(`./modules/${moduleName}.vue`)))
   }
+}
+
+// build initially and react to prop changes
+rebuildModules(props.modulesRaw)
+watch(
+  () => props.modulesRaw,
+  (v) => {
+    rebuildModules(v)
+  },
+)
+
+// Transition hooks for smooth height animation when modules mount/unmount
+function beforeEnter(el: Element) {
+  const e = el as HTMLElement
+  e.style.height = '0px'
+  e.style.overflow = 'hidden'
+}
+
+function enter(el: Element, done: () => void) {
+  const e = el as HTMLElement
+  const h = e.scrollHeight
+  e.style.transition = 'height 260ms cubic-bezier(.2,.9,.2,1)'
+  // force frame
+  requestAnimationFrame(() => {
+    e.style.height = h + 'px'
+  })
+  setTimeout(() => {
+    e.style.height = ''
+    e.style.overflow = ''
+    e.style.transition = ''
+    done()
+  }, 260)
+}
+
+function beforeLeave(el: Element) {
+  const e = el as HTMLElement
+  e.style.height = e.scrollHeight + 'px'
+  e.style.overflow = 'hidden'
+}
+
+function leave(el: Element, done: () => void) {
+  const e = el as HTMLElement
+  // trigger reflow
+  void e.offsetHeight
+  e.style.transition = 'height 200ms ease'
+  requestAnimationFrame(() => {
+    e.style.height = '0px'
+  })
+  setTimeout(() => {
+    e.style.transition = ''
+    e.style.height = ''
+    e.style.overflow = ''
+    done()
+  }, 200)
 }
 </script>
 
@@ -65,7 +122,14 @@ if (props.modulesRaw && props.modulesRaw.length) {
 
     <template v-for="(module, idx) in modules" :key="idx">
       <Suspense suspensible>
-        <Transition name="city-change" mode="out-in">
+        <Transition
+          name="city-change"
+          mode="out-in"
+          @before-enter="beforeEnter"
+          @enter="enter"
+          @before-leave="beforeLeave"
+          @leave="leave"
+        >
           <component
             :is="module"
             :key="`${props.city?.name ?? 'city'}-${idx}`"
