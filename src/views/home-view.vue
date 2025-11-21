@@ -24,15 +24,15 @@ const { height } = useScrollShrink(
 )
 
 const headerStyle = computed(() => ({
-  height: height.value ? height.value.toFixed(2) + 'px' : '100%',
+  height: height.value ? height.value.toFixed(0) + 'px' : 'auto',
 }))
 </script>
 
 <template>
   <header
     v-if="store.favorites.length > 0"
-    class="w-full container flex-col flex gap-2 mobilpe scrollbar-mobile items-center will-change-scroll justify-center"
-    :style="headerStyle"
+    class="w-full transition-[height] ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-center"
+    :style="{ ...headerStyle, willChange: 'scroll-position' }"
   >
     <div
       class="header-container w-full container flex-row flex gap-2 items-center will-change-scroll justify-start pb-4 px-4"
@@ -40,7 +40,7 @@ const headerStyle = computed(() => ({
       <h1
         class="header-title text-right text-2xl sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
       >
-        هوا چطوره ؟
+        هوا چطوره؟
       </h1>
       <h2 class="header-time text-right text-lg sm:text-xl font-medium text-slate-600">
         {{
