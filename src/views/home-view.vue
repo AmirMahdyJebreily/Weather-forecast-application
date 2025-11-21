@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, useTemplateRef, ref } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
+import type { City } from '@/stores/weather'
+import BaseModal from '@/components/base-modal.vue'
 import { MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
-import { PlusIcon } from '@heroicons/vue/24/solid'
+import { PlusIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/solid'
 import { useScrollShrink } from '@/composables/useScrollShrink'
 
 const store = useWeatherStore()
@@ -26,6 +28,23 @@ const { height } = useScrollShrink(
 const headerStyle = computed(() => ({
   height: height.value ? height.value.toFixed(0) + 'px' : 'auto',
 }))
+
+/* modal state for delete confirmation */
+const modalVisible = ref(false)
+const modalCity = ref<City | null>(null)
+
+function requestDelete(city: City) {
+  modalCity.value = city
+  modalVisible.value = true
+}
+
+function confirmDelete() {
+  if (modalCity.value) {
+    store.toggleFavorite(modalCity.value)
+  }
+  modalCity.value = null
+  modalVisible.value = false
+}
 </script>
 
 <template>
@@ -73,7 +92,7 @@ const headerStyle = computed(() => ({
       >
         <template #actions
           ><button
-            @click="store.toggleFavorite(value)"
+            @click="requestDelete(value)"
             class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
           >
             <TrashIcon class="size-5 text-rose-600" /></button
@@ -100,6 +119,18 @@ const headerStyle = computed(() => ({
       <PlusIcon class="size-7" />
     </RouterLink>
   </div>
+  <!-- delete confirmation modal -->
+  <BaseModal v-model:modelValue="modalVisible" @confirm="confirmDelete">
+    <div class="flex w-full items-center justify-center gap-4 py-3">
+      <ExclamationTriangleIcon class="text-rose-600 size-12" />
+      <div>
+        <p class="text-lg font-bold">می‌خوای {{ modalCity?.name }} حذف بشه؟</p>
+        <p class="text-sm text-slate-500 font-medium mt-2">
+          نگران نباش — اگه پشیمون شدی می‌تونی با دکمهٔ + دوباره اضافه کنی.
+        </p>
+      </div>
+    </div>
+  </BaseModal>
 </template>
 
 <style lang="css" scoped>
