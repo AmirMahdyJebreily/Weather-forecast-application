@@ -64,20 +64,22 @@ const headerStyle = computed(() => ({
     ref="scroller"
     class="w-full flex flex-col scroll-py-2 items-center justify-start bg-gray-50 gap-3 flex-1 h-full overflow-auto px-2 py-5 rounded-3xl border border-gray-200"
   >
-    <BaseCityCard
-      v-for="value in store.favorites"
-      :key="value.id"
-      :city="value"
-      :modules-raw="['now-status', 'hourly-status']"
-    >
-      <template #actions
-        ><button
-          @click="store.toggleFavorite(value)"
-          class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
-        >
-          <TrashIcon class="size-5 text-rose-600" /></button
-      ></template>
-    </BaseCityCard>
+    <transition-group name="fav" tag="div" class="w-full flex flex-col gap-3">
+      <BaseCityCard
+        v-for="value in store.favorites"
+        :key="value.id"
+        :city="value"
+        :modules-raw="['now-status', 'hourly-status']"
+      >
+        <template #actions
+          ><button
+            @click="store.toggleFavorite(value)"
+            class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
+          >
+            <TrashIcon class="size-5 text-rose-600" /></button
+        ></template>
+      </BaseCityCard>
+    </transition-group>
     <div
       class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
       v-if="store.favorites.length < 1 && !store.loadingSearch"
@@ -104,6 +106,36 @@ const headerStyle = computed(() => ({
 /* ابتدا کانتینر را تعریف می‌کنیم */
 header {
   container-type: size; /* حتما باید این را داشته باشیم تا container query فعال شود */
+}
+
+/* TransitionGroup animations for favorite cards */
+.fav-enter-from {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.995);
+}
+.fav-enter-active {
+  transition:
+    opacity 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fav-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.995);
+  height: 0 !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.fav-leave-active {
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease,
+    height 200ms ease,
+    margin 200ms ease,
+    padding 200ms ease;
+}
+.fav-move {
+  transition: transform 200ms ease;
 }
 
 /* استایل پیش‌فرض برای h1 و h2 */
