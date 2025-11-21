@@ -1,5 +1,6 @@
 <script async setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
+import { useUiStore } from '@/stores/ui'
 import { useWeatherStore, type City, type SimpleHourlyPoint } from '@/stores/weather'
 import HumidityIcon from '../../../../public/icons/humidity-svgrepo-com.svg'
 
@@ -21,6 +22,7 @@ const currentVisibleIdx = ref<number | null>(null)
 const containerRef = ref<HTMLElement | null>(null)
 
 const store = useWeatherStore()
+const ui = useUiStore()
 
 function mapWeatherCodeToFarsi(code: number) {
   const weatherMap: Record<
@@ -93,6 +95,25 @@ function formatHour(date: Date, timeZone?: string) {
   }
 }
 
+function getYMD(date: Date, timeZone?: string) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timeZone ?? 'UTC',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date)
+
+  let year = 0
+  let month = 0
+  let day = 0
+  for (const p of parts) {
+    if (p.type === 'year') year = Number(p.value)
+    else if (p.type === 'month') month = Number(p.value) - 1
+    else if (p.type === 'day') day = Number(p.value)
+  }
+  return { year, month, day }
+}
+
 async function loadHours() {
   loading.value = true
   error.value = null
@@ -104,28 +125,25 @@ async function loadHours() {
       return
     }
 
-    // try to get the current hour index using store helper
-    const current = await store.getCurrentWeatherWithTimezone(props.city)
-    let idx = typeof current?.index === 'number' ? current!.index : 0
-    if (idx < 0) idx = 0
+    // determine today's YMD in the city's timezone
+    const nowParts = getYMD(new Date(), props.city.timezone)
 
-    // compute visible range using props.rangeHours and props.pastHours
-    const start = Math.max(0, idx - (props.pastHours ?? 0))
-    const end = Math.min(simple.hourly.length, idx + (props.rangeHours ?? 24))
-    let slice = simple.hourly.slice(start, end)
+    const filtered = simple.hourly.filter((p) => {
+      const d = p.timeParsed ?? new Date(p.time)
+      const pParts = getYMD(d, props.city.timezone)
+      const dateA = Date.UTC(nowParts.year, nowParts.month, nowParts.day)
+      const dateB = Date.UTC(pParts.year, pParts.month, pParts.day)
+      const dayOffset = Math.round((dateB - dateA) / (24 * 60 * 60 * 1000))
+      return dayOffset === ui.selectedDayIndex
+    })
 
-    // remember which index inside the slice is the "current" hour
-    const currentIdxInSlice = idx - start
-
-    // rotate so the current hour is first (as requested)
-    if (currentIdxInSlice > 0 && currentIdxInSlice < slice.length) {
-      slice = slice.slice(currentIdxInSlice).concat(slice.slice(0, currentIdxInSlice))
+    if (filtered.length === 0) {
+      error.value = 'دادهٔ ساعتی در دسترس نیست'
+      hours.value = []
+    } else {
+      hours.value = filtered
+      currentVisibleIdx.value = 0
     }
-
-    hours.value = slice
-
-    // after rotation the current hour is at index 0
-    currentVisibleIdx.value = 0
   } catch {
     error.value = 'خطا در دریافت دادهٔ آب و هوا'
     hours.value = []
@@ -133,6 +151,15 @@ async function loadHours() {
     loading.value = false
   }
 }
+
+// react to day changes
+watch(
+  () => ui.selectedDayIndex,
+  () => {
+    // reload hours for the new selected day
+    loadHours()
+  },
+)
 
 await loadHours()
 
@@ -168,7 +195,7 @@ onMounted(async () => {
 
     <template v-else>
       <div ref="containerRef" class="overflow-x-auto -mx-1 py-2">
-        <div class="flex gap-3 px-1">
+        <TransitionGroup name="hour-fade" tag="div" class="flex gap-3 px-1">
           <div
             v-for="(h, idx) in hours"
             :key="h.time + '-' + idx"
@@ -201,7 +228,7 @@ onMounted(async () => {
               {{ h.values.relativehumidity_2m ?? '-' }}%
             </p>
           </div>
-        </div>
+        </TransitionGroup>
       </div>
     </template>
   </div>
@@ -231,5 +258,24 @@ onMounted(async () => {
 .hourly-module::-webkit-scrollbar-thumb {
   background: rgba(100, 116, 139, 0.4);
   border-radius: 9999px;
+}
+</style>
+
+<style scoped>
+.hour-fade-enter-active,
+.hour-fade-leave-active {
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+.hour-fade-enter-from,
+.hour-fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.995);
+}
+.hour-fade-enter-to,
+.hour-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 </style>

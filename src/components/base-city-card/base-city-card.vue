@@ -33,7 +33,9 @@ if (props.modulesRaw && props.modulesRaw.length) {
 </script>
 
 <template>
-  <div class="city-card">
+  <div
+    class="city-card flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-tl from-slate-50/50 to-slate-200/50 rounded-3xl border border-slate-200 shadow gap-2 py-4 px-6"
+  >
     <div class="flex items-center justify-between w-full">
       <span class="flex items-start justify-center gap-2 w-full" @click="toggleShowCityInfo">
         <span
@@ -63,7 +65,13 @@ if (props.modulesRaw && props.modulesRaw.length) {
 
     <template v-for="(module, idx) in modules" :key="idx">
       <Suspense suspensible>
-        <component :is="module" :key="idx" :city="props.city" />
+        <Transition name="city-change" mode="out-in">
+          <component
+            :is="module"
+            :key="`${props.city?.name ?? 'city'}-${idx}`"
+            :city="props.city"
+          />
+        </Transition>
         <template #fallback>
           <span class="w-full bg-slate-300/80 animate-pulse h-[100px] rounded-3xl" />
         </template>
@@ -73,7 +81,26 @@ if (props.modulesRaw && props.modulesRaw.length) {
 </template>
 
 <style lang="css" scoped>
-.city-card {
-  @apply flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-tl from-slate-50/50 to-slate-200/50 rounded-3xl border border-slate-200 shadow gap-2 py-4 px-6;
+.city-change-enter-active,
+.city-change-leave-active {
+  transition:
+    opacity 260ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    transform 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.city-change-enter-from {
+  opacity: 0;
+  transform: translateY(8px) scale(0.995);
+}
+.city-change-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.city-change-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.city-change-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.995);
 }
 </style>

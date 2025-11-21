@@ -4,6 +4,7 @@ import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import type { City } from '@/stores/weather'
 import BaseModal from '@/components/base-modal.vue'
+import DaySelector from '@/components/day-selector.vue'
 import { MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/solid'
 import { useScrollShrink } from '@/composables/useScrollShrink'
@@ -49,33 +50,18 @@ function confirmDelete() {
 
 <template>
   <header
-    v-if="store.favorites.length > 0"
-    class="w-full transition-[height] ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-center"
+    class="w-dvw transition-[height] ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-center"
     :style="{ ...headerStyle, willChange: 'scroll-position' }"
   >
     <div
       class="header-container w-full container flex-row flex gap-2 items-center will-change-scroll justify-start pb-4 px-4"
     >
       <h1
-        class="header-title text-right text-2xl sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
+        class="header-title text-right text-2xl flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
       >
         هوا چطوره؟
       </h1>
-      <h2 class="header-time text-right text-lg sm:text-xl font-medium text-slate-600">
-        {{
-          new Date().toLocaleDateString('fa-IR', {
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long',
-          })
-        }}، ساعت
-        {{
-          new Date().toLocaleTimeString('fa-IR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        }}
-      </h2>
+      <DaySelector />
     </div>
   </header>
 
