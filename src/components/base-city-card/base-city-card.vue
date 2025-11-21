@@ -6,7 +6,7 @@ import { defineAsyncComponent, ref } from 'vue'
 const props = withDefaults(
   defineProps<{
     city: City
-    module?: string
+    modulesRaw?: string[]
     infoHidable?: boolean
   }>(),
   {
@@ -25,8 +25,10 @@ function toggleShowCityInfo() {
   showCityInfo.value = !showCityInfo.value
 }
 
-if (props.module && props.module.length) {
-  modules.push(defineAsyncComponent(() => import(`./modules/${props.module!}.vue`)))
+if (props.modulesRaw && props.modulesRaw.length) {
+  for (const moduleName of props.modulesRaw) {
+    modules.push(defineAsyncComponent(() => import(`./modules/${moduleName}.vue`)))
+  }
 }
 </script>
 
@@ -42,7 +44,7 @@ if (props.module && props.module.length) {
         <p class="pt-0.5 text-xl line-clamp-1 flex items-center justify-start w-full gap-1">
           <span class="flex-none"> {{ props.city.name }}، </span>
           <span
-            :class="`text-gray-500 font-light text-lg flex-none text-ellipsis text-nowrap overflow-hidden transition-[width] ease-out duration-700 ${showCityInfo ? 'w-full' : 'w-7'}`"
+            :class="`text-gray-500 font-light text-sm flex-none text-ellipsis text-nowrap overflow-hidden transition-[width] ease-out duration-700 ${showCityInfo ? 'w-full' : 'w-7'}`"
           >
             {{
               showCityInfo

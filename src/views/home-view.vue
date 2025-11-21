@@ -68,7 +68,7 @@ const headerStyle = computed(() => ({
       v-for="value in store.favorites"
       :key="value.id"
       :city="value"
-      module="now-status"
+      :modules-raw="['now-status', 'hourly-status']"
     >
       <template #actions
         ><button
