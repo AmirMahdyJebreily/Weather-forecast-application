@@ -11,6 +11,9 @@ import { useScrollShrink } from '@/composables/useScrollShrink'
 
 const store = useWeatherStore()
 
+import { useUiStore } from '@/stores/ui'
+const ui = useUiStore()
+
 const el = useTemplateRef('scroller')
 
 enum HomePageScrollShrinks {
@@ -33,7 +36,7 @@ const headerStyle = computed(() => ({
 /* modal state for delete confirmation */
 const modalVisible = ref(false)
 const modalCity = ref<City | null>(null)
-const expandedCityId = ref<string | null>(null)
+const expandedCityId = ref<string | null>(null) // stored as `${selectedDayIndex}:${cityId}`
 const NOW_ONLY: string[] = ['now-status']
 const NOW_AND_HOURLY: string[] = ['now-status', 'hourly-status']
 
@@ -51,7 +54,8 @@ function confirmDelete() {
 }
 
 function toggleExpand(cityId: string) {
-  expandedCityId.value = expandedCityId.value === cityId ? null : cityId
+  const key = `${ui.selectedDayIndex}:${cityId}`
+  expandedCityId.value = expandedCityId.value === key ? null : key
 }
 
 // double-tap detection for touch devices and dblclick for mouse
@@ -103,7 +107,10 @@ function onCardDblClick(id: string) {
 watch(expandedCityId, async (id) => {
   await nextTick()
   if (!id) return
-  const el = document.querySelector(`[data-card-id="${id}"]`) as HTMLElement | null
+  // `id` is stored as `${selectedDayIndex}:${cityId}`. extract cityId (may contain colons)
+  const sep = id.indexOf(':')
+  const cityId = sep >= 0 ? id.slice(sep + 1) : id
+  const el = document.querySelector(`[data-card-id="${cityId}"]`) as HTMLElement | null
   if (!el) return
   // scroll the card into center of viewport smoothly
   el.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -138,16 +145,16 @@ watch(expandedCityId, async (id) => {
         class="card-wrapper"
         :data-card-id="value.id"
       >
-        <div
+          <div
           class="w-full"
           @touchstart.passive="onCardTouchStart"
           @touchend.passive="(e) => onCardTouchEnd(e, value.id)"
           @dblclick.prevent="() => onCardDblClick(value.id)"
-          :aria-expanded="expandedCityId === value.id"
+          :aria-expanded="expandedCityId === (ui.selectedDayIndex + ':' + value.id)"
         >
           <BaseCityCard
             :city="value"
-            :modules-raw="expandedCityId === value.id ? NOW_AND_HOURLY : NOW_ONLY"
+            :modules-raw="expandedCityId === (ui.selectedDayIndex + ':' + value.id) ? NOW_AND_HOURLY : NOW_ONLY"
           >
             <template #actions>
               <button

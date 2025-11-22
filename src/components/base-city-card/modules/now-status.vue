@@ -60,34 +60,70 @@ async function loadForSelectedDay() {
 
   if (candidates.length === 0) return
 
-  // pick the hour closest to midday (12:00) as a representative
-  const first = candidates[0]!
-  let best = first
-  let bestDiff = Math.abs(((first.timeParsed ?? new Date(first.time)).getHours() ?? 0) - 12)
-  for (const c of candidates) {
-    const h = (c.timeParsed ?? new Date(c.time)).getHours() ?? 0
-    const d = Math.abs(h - 12)
-    if (d < bestDiff) {
-      best = c
-      bestDiff = d
+  // If the user selected today, prefer the hour that matches "now" in the city's timezone
+  // otherwise fall back to the hour closest to midday for other days
+  let chosen = candidates[0]!
+
+  if (ui.selectedDayIndex === 0) {
+    // try to find an exact hour match to the city's local current hour
+    let exact: (typeof candidates)[0] | null = null
+    for (const c of candidates) {
+      const d = c.timeParsed ?? new Date(c.time)
+      const pParts = getYMDH(d, props.city.timezone)
+      if (
+        pParts.year === nowParts.year &&
+        pParts.month === nowParts.month &&
+        pParts.day === nowParts.day &&
+        pParts.hour === nowParts.hour
+      ) {
+        exact = c
+        break
+      }
     }
+
+    if (exact) {
+      chosen = exact
+    } else {
+      // no exact match: pick candidate with minimal hour distance (in city-local hours)
+      let best = candidates[0]!
+      let bestDiffHours = Number.POSITIVE_INFINITY
+      for (const c of candidates) {
+        const d = c.timeParsed ?? new Date(c.time)
+        const pParts = getYMDH(d, props.city.timezone)
+        const candidateUtcHourStamp = Date.UTC(pParts.year, pParts.month, pParts.day, pParts.hour)
+        const nowUtcHourStamp = Date.UTC(nowParts.year, nowParts.month, nowParts.day, nowParts.hour)
+        const diffHours = Math.abs(candidateUtcHourStamp - nowUtcHourStamp) / (1000 * 60 * 60)
+        if (diffHours < bestDiffHours) {
+          bestDiffHours = diffHours
+          best = c
+        }
+      }
+      chosen = best
+    }
+  } else {
+    // selected not today: choose hour closest to midday (12:00) as before
+    const first = candidates[0]!
+    let best = first
+    let bestDiff = Math.abs(((first.timeParsed ?? new Date(first.time)).getHours() ?? 0) - 12)
+    for (const c of candidates) {
+      const h = (c.timeParsed ?? new Date(c.time)).getHours() ?? 0
+      const d = Math.abs(h - 12)
+      if (d < bestDiff) {
+        best = c
+        bestDiff = d
+      }
+    }
+    chosen = best
   }
 
-  tempereture.value = (best.values.temperature_2m as number) ?? tempereture.value
-  humidity.value = (best.values.relativehumidity_2m as number) ?? humidity.value
-  windspeed.value = (best.values.windspeed_10m as number) ?? windspeed.value
-  weatherCode.value = (best.values.weathercode as number) ?? weatherCode.value
+  tempereture.value = (chosen.values.temperature_2m as number) ?? tempereture.value
+  humidity.value = (chosen.values.relativehumidity_2m as number) ?? humidity.value
+  windspeed.value = (chosen.values.windspeed_10m as number) ?? windspeed.value
+  weatherCode.value = (chosen.values.weathercode as number) ?? weatherCode.value
 }
 
 await nextTick()
 await loadForSelectedDay()
-
-watch(
-  () => ui.selectedDayIndex,
-  () => {
-    loadForSelectedDay()
-  },
-)
 
 type WeatherFarsi = {
   title: string
@@ -150,6 +186,13 @@ function mapWeatherCodeToFarsi(code: number): WeatherFarsi {
     }
   )
 }
+
+watch(
+  () => ui.selectedDayIndex,
+  () => {
+    loadForSelectedDay()
+  },
+)
 
 function getWeatherIconUrl(code: number, date: Date): string {
   const { icon_day, icon_night } = mapWeatherCodeToFarsi(code)
