@@ -5,13 +5,12 @@ import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import type { City } from '@/stores/weather'
 import BaseModal from '@/components/base-modal.vue'
 import DaySelector from '@/components/day-selector.vue'
+import { useUiStore } from '@/stores/ui'
 import { MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/solid'
 import { useScrollShrink } from '@/composables/useScrollShrink'
 
 const store = useWeatherStore()
-
-import { useUiStore } from '@/stores/ui'
 const ui = useUiStore()
 
 const el = useTemplateRef('scroller')
