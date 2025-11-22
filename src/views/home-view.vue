@@ -144,16 +144,18 @@ watch(expandedCityId, async (id) => {
         class="card-wrapper"
         :data-card-id="value.id"
       >
-          <div
+        <div
           class="w-full"
           @touchstart.passive="onCardTouchStart"
           @touchend.passive="(e) => onCardTouchEnd(e, value.id)"
           @dblclick.prevent="() => onCardDblClick(value.id)"
-          :aria-expanded="expandedCityId === (ui.selectedDayIndex + ':' + value.id)"
+          :aria-expanded="expandedCityId === ui.selectedDayIndex + ':' + value.id"
         >
           <BaseCityCard
             :city="value"
-            :modules-raw="expandedCityId === (ui.selectedDayIndex + ':' + value.id) ? NOW_AND_HOURLY : NOW_ONLY"
+            :modules-raw="
+              expandedCityId === ui.selectedDayIndex + ':' + value.id ? NOW_AND_HOURLY : NOW_ONLY
+            "
           >
             <template #actions>
               <button
