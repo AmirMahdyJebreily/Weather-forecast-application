@@ -119,21 +119,26 @@ watch(expandedCityId, async (id) => {
 
 <template>
   <header
-    class="w-dvw transition-[height] pt-8 ease-out container flex-col flex gap-2 scrollbar-mobile items-center justify-end"
+    class="w-dvw transition-[height] pt-8 ease-out container flex-col flex gap-y-4 scrollbar-mobile items-center justify-end"
     :style="{ ...headerStyle, willChange: 'scroll-position' }"
   >
     <div
-      class="header-container w-full container flex-row flex gap-2 items-center will-change-scroll justify-start pb-4 px-4"
+      class="header-container w-full container flex-row flex gap-y-6 items-center will-change-scroll justify-start pb-2 px-4"
     >
       <h1
-        class="header-title text-right text-2xl flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
+        class="header-title text-right text-2xl flex items-center justify-center gap-x-2 flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
       >
-        هوای من
+        <span>هوای من</span>
+        <RouterLink class="header-info-link bg-gray-300 p-0.5 rounded-full" :to="views.ABOUTUS"
+          ><InformationCircleIcon class="size-5" />
+        </RouterLink>
       </h1>
-      <RouterLink class="absolute top-2 left-3 bg-gray-300 p-0.5 rounded-full" :to="views.ABOUTUS"
-        ><InformationCircleIcon class="size-6" />
-      </RouterLink>
-      <DaySelector />
+
+      <DaySelector
+        :is-compact="
+          height < (HomePageScrollShrinks.MAX_HEIGHT + HomePageScrollShrinks.MIN_HEIGHT) / 2
+        "
+      />
     </div>
   </header>
 
@@ -269,6 +274,7 @@ header {
   .header-container {
     flex-direction: column;
     justify-content: center;
+    padding-bottom: 24px;
   }
   .header-title {
     font-size: 2rem;
@@ -278,6 +284,10 @@ header {
   .header-time {
     font-size: 1.25rem;
     text-align: right !important;
+  }
+
+  .header-info-link {
+    @apply absolute top-4 left-4;
   }
 }
 
