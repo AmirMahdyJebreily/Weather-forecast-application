@@ -6,9 +6,10 @@ import type { City } from '@/stores/weather'
 import BaseModal from '@/components/base-modal.vue'
 import DaySelector from '@/components/day-selector.vue'
 import { useUiStore } from '@/stores/ui'
-import { MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { InformationCircleIcon, MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/solid'
 import { useScrollShrink } from '@/composables/useScrollShrink'
+import { views } from '@/router'
 
 const store = useWeatherStore()
 const ui = useUiStore()
@@ -127,8 +128,11 @@ watch(expandedCityId, async (id) => {
       <h1
         class="header-title text-right text-2xl flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
       >
-        هوا چطوره؟
+        هوای من
       </h1>
+      <RouterLink class="absolute top-2 left-3 bg-gray-300 p-0.5 rounded-full" :to="views.ABOUTUS"
+        ><InformationCircleIcon class="size-6" />
+      </RouterLink>
       <DaySelector />
     </div>
   </header>
