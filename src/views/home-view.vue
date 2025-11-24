@@ -22,13 +22,21 @@ enum HomePageScrollShrinks {
   MAX_SCROLL = (MAX_HEIGHT + MIN_HEIGHT) / 4,
 }
 
+// تعریف یک تابع سفارشی (مثلاً قوی‌تر)
+const customEase = (x: number) => {
+  // Ease-In-Quart: شروع بسیار ملایم
+  return x * x * x * x
+}
+
+// استفاده از هوک:
+// ماکس ارتفاع: 200، مین ارتفاع: 60، مقاومت: 0.5 (نصف ماکس اسکرول مقاومت می‌کند)، تابع: customEase
 const { height } = useScrollShrink(
   el,
-  HomePageScrollShrinks.MAX_HEIGHT,
-  HomePageScrollShrinks.MIN_HEIGHT,
-  HomePageScrollShrinks.MAX_SCROLL,
+  200,
+  60,
+  0.6, // resistanceFactor
+  customEase, // easeFn
 )
-
 const headerStyle = computed(() => ({
   height: height.value ? height.value.toFixed(0) + 'px' : 'auto',
 }))
