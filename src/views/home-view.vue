@@ -32,8 +32,8 @@ const customEase = (x: number) => {
 // ماکس ارتفاع: 200، مین ارتفاع: 60، مقاومت: 0.5 (نصف ماکس اسکرول مقاومت می‌کند)، تابع: customEase
 const { height } = useScrollShrink(
   el,
-  200,
-  60,
+  HomePageScrollShrinks.MAX_HEIGHT,
+  HomePageScrollShrinks.MIN_HEIGHT,
   0.6, // resistanceFactor
   customEase, // easeFn
 )
@@ -126,104 +126,114 @@ watch(expandedCityId, async (id) => {
 </script>
 
 <template>
-  <header
-    class="w-dvw transition-[height] pt-8 ease-out container flex-col flex gap-y-4 scrollbar-mobile items-center justify-end"
-    :style="{ ...headerStyle, willChange: 'scroll-position' }"
-  >
-    <div
-      class="header-container w-full container flex-row flex gap-y-6 items-center will-change-scroll justify-start pb-2 px-4"
-    >
-      <h1
-        class="header-title text-right text-2xl flex items-center justify-center gap-x-2 flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
-      >
-        <span>هوای من</span>
-        <RouterLink class="header-info-link bg-gray-300 p-0.5 rounded-full" :to="views.ABOUTUS"
-          ><InformationCircleIcon class="size-5" />
-        </RouterLink>
-      </h1>
-
-      <DaySelector
-        :is-compact="
-          height < (HomePageScrollShrinks.MAX_HEIGHT + HomePageScrollShrinks.MIN_HEIGHT) / 2
-        "
-      />
-    </div>
-  </header>
-
   <div
     ref="scroller"
-    class="w-full flex flex-col scroll-py-2 items-center justify-start bg-gray-50 gap-3 flex-1 h-full overflow-auto px-2 py-5 rounded-3xl border border-gray-200"
+    class="w-full overflow-y-auto overflow-hidden scroll-py-2 flex flex-col items-center h-full justify-start"
   >
-    <transition-group name="fav" tag="div" class="w-full flex flex-col gap-3">
+    <header
+      class="w-dvw flex-none fixed top-0 left-0 z-50 backdrop-blur-lg bg-gray-100/90 shadow-inner border-b border-gray-300 rounded-b-[35px] transition-[height] pt-8 ease-out container flex-col flex gap-y-4 scrollbar-mobile items-center justify-end"
+      :style="{ ...headerStyle, willChange: 'scroll-position' }"
+    >
       <div
-        v-for="value in store.favorites"
-        :key="value.id"
-        class="card-wrapper"
-        :data-card-id="value.id"
+        class="header-container w-full container flex-row flex gap-y-6 items-center will-change-scroll justify-start pb-3 px-4"
       >
-        <div
-          class="w-full"
-          @touchstart.passive="onCardTouchStart"
-          @touchend.passive="(e) => onCardTouchEnd(e, value.id)"
-          @dblclick.prevent="() => onCardDblClick(value.id)"
-          :aria-expanded="expandedCityId === ui.selectedDayIndex + ':' + value.id"
+        <h1
+          class="header-title text-right text-2xl flex items-center justify-center gap-x-2 flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
         >
-          <BaseCityCard
-            :city="value"
-            :modules-raw="
-              expandedCityId === ui.selectedDayIndex + ':' + value.id ? NOW_AND_HOURLY : NOW_ONLY
-            "
+          <span>هوای من</span>
+          <RouterLink class="header-info-link bg-gray-300 p-0.5 rounded-full" :to="views.ABOUTUS"
+            ><InformationCircleIcon class="size-5" />
+          </RouterLink>
+        </h1>
+
+        <DaySelector
+          :is-compact="
+            height < (HomePageScrollShrinks.MAX_HEIGHT + HomePageScrollShrinks.MIN_HEIGHT) / 2
+          "
+        />
+      </div>
+    </header>
+    <div
+      class="flex-none"
+      :style="{
+        height: HomePageScrollShrinks.MAX_HEIGHT + 'px',
+      }"
+    ></div>
+    <div class="w-full flex flex-col items-center justify-start gap-3 flex-1 h-full px-2 py-5">
+      <transition-group name="fav" tag="div" class="w-full flex flex-col gap-3">
+        <div
+          v-for="value in store.favorites"
+          :key="value.id"
+          class="card-wrapper"
+          :data-card-id="value.id"
+        >
+          <div
+            class="w-full"
+            @touchstart.passive="onCardTouchStart"
+            @touchend.passive="(e) => onCardTouchEnd(e, value.id)"
+            @dblclick.prevent="() => onCardDblClick(value.id)"
+            :aria-expanded="expandedCityId === ui.selectedDayIndex + ':' + value.id"
           >
-            <template #actions>
-              <button
-                @click.stop="requestDelete(value)"
-                class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
-              >
-                <TrashIcon class="size-5 text-rose-600" />
-              </button>
-            </template>
-          </BaseCityCard>
+            <BaseCityCard
+              :city="value"
+              :modules-raw="
+                expandedCityId === ui.selectedDayIndex + ':' + value.id ? NOW_AND_HOURLY : NOW_ONLY
+              "
+            >
+              <template #actions>
+                <button
+                  @click.stop="requestDelete(value)"
+                  class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
+                >
+                  <TrashIcon class="size-5 text-rose-600" />
+                </button>
+              </template>
+            </BaseCityCard>
+          </div>
+        </div>
+      </transition-group>
+      <br />
+      <br />
+      <br />
+      <br />
+      <br />
+      <br />
+      <div
+        class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
+        v-if="store.favorites.length < 1 && !store.loadingSearch"
+      >
+        <MapPinIcon class="size-20" />
+        <span class="text-3xl font-bold">مکانی نیست!</span>
+        <span class="text-xl font-light">مکانی انتخاب کنید...</span>
+      </div>
+
+      <div
+        class="flex flex-col items-center justify-center gap-1 w-full"
+        v-if="store.loadingSearch"
+      >
+        <span class="bg-slate-300/60 animate-pulse rounded-3xl h-[174px] w-full"></span>
+      </div>
+
+      <RouterLink
+        :to="{ name: 'srchloc' }"
+        :class="`fixed flex items-center !transition-[left] duration-1000 justify-center size-14 bg-gradient-to-t from-slate-400/50 shadow-lg shadow-slate-4/7000 backdrop-blur-md to-slate-300/50 rounded-full bottom-12 ${!(store.favorites.length < 1 && !store.loadingSearch) ? 'left-6' : 'before:absolute before:rounded-full before:animate-ping animate-bounce z-50 before:bg-gray-100/50 before:z-40 before:size-full'} text-slate-600`"
+      >
+        <PlusIcon class="size-7" />
+      </RouterLink>
+    </div>
+    <!-- delete confirmation modal -->
+    <BaseModal v-model:modelValue="modalVisible" @confirm="confirmDelete">
+      <div class="flex w-full items-center justify-center gap-4 py-3">
+        <ExclamationTriangleIcon class="text-rose-600 size-12" />
+        <div>
+          <p class="text-lg font-bold">می‌خوای {{ modalCity?.name }} حذف بشه؟</p>
+          <p class="text-sm text-slate-500 font-medium mt-2">
+            نگران نباش — اگه پشیمون شدی می‌تونی با دکمهٔ + دوباره اضافه کنی.
+          </p>
         </div>
       </div>
-    </transition-group>
-    <br />
-    <br />
-    <br />
-    <br />
-    <br />
-    <br />
-    <div
-      class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
-      v-if="store.favorites.length < 1 && !store.loadingSearch"
-    >
-      <MapPinIcon class="size-20" />
-      <span class="text-3xl font-bold">مکانی نیست!</span>
-      <span class="text-xl font-light">مکانی انتخاب کنید...</span>
-    </div>
-
-    <div class="flex flex-col items-center justify-center gap-1 w-full" v-if="store.loadingSearch">
-      <span class="bg-slate-300/60 animate-pulse rounded-3xl h-[174px] w-full"></span>
-    </div>
-
-    <RouterLink
-      :to="{ name: 'srchloc' }"
-      :class="`fixed flex items-center !transition-[left] duration-1000 justify-center size-14 bg-gradient-to-t from-slate-400/50 shadow-lg shadow-slate-4/7000 backdrop-blur-md to-slate-300/50 rounded-full bottom-12 ${!(store.favorites.length < 1 && !store.loadingSearch) ? 'left-6' : 'before:absolute before:rounded-full before:animate-ping animate-bounce z-50 before:bg-gray-100/50 before:z-40 before:size-full'} text-slate-600`"
-    >
-      <PlusIcon class="size-7" />
-    </RouterLink>
+    </BaseModal>
   </div>
-  <!-- delete confirmation modal -->
-  <BaseModal v-model:modelValue="modalVisible" @confirm="confirmDelete">
-    <div class="flex w-full items-center justify-center gap-4 py-3">
-      <ExclamationTriangleIcon class="text-rose-600 size-12" />
-      <div>
-        <p class="text-lg font-bold">می‌خوای {{ modalCity?.name }} حذف بشه؟</p>
-        <p class="text-sm text-slate-500 font-medium mt-2">
-          نگران نباش — اگه پشیمون شدی می‌تونی با دکمهٔ + دوباره اضافه کنی.
-        </p>
-      </div>
-    </div>
-  </BaseModal>
 </template>
 
 <style lang="css" scoped>
@@ -301,6 +311,9 @@ header {
 
 /* وقتی ارتفاع container حداقل 150px باشد */
 @container (min-height: 150px) {
+  header {
+    border-bottom-right-radius: 35px !important;
+  }
   .header-title {
     font-size: 2.5rem;
     text-align: center !important;
