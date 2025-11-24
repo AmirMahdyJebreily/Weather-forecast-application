@@ -1,5 +1,5 @@
 <script async setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { useWeatherStore, type City, type SimpleHourlyPoint } from '@/stores/weather'
 import HumidityIcon from '../../../../public/icons/humidity-svgrepo-com.svg'
@@ -141,9 +141,46 @@ async function loadHours() {
     if (filtered.length === 0) {
       error.value = 'دادهٔ ساعتی در دسترس نیست'
       hours.value = []
+      currentVisibleIdx.value = null
     } else {
-      hours.value = filtered
-      currentVisibleIdx.value = 0
+      // Prefer an exact client-local hour match first (if present), otherwise sort by proximity to client's current time
+      const nowClient = new Date()
+
+      // try to find exact hour match in client's local time
+      let exactIdx = -1
+      for (let i = 0; i < filtered.length; i++) {
+        const p = filtered[i]!
+        const d = p.timeParsed ?? new Date(p.time)
+        if (
+          d.getFullYear() === nowClient.getFullYear() &&
+          d.getMonth() === nowClient.getMonth() &&
+          d.getDate() === nowClient.getDate() &&
+          d.getHours() === nowClient.getHours()
+        ) {
+          exactIdx = i
+          break
+        }
+      }
+
+      if (exactIdx >= 0) {
+        // rotate so exact hour is first, preserving chronological order after it
+        hours.value = filtered.slice(exactIdx).concat(filtered.slice(0, exactIdx))
+        currentVisibleIdx.value = 0
+      } else {
+        // sort by absolute time distance to client's now
+        const nowMs = nowClient.getTime()
+        const sorted = filtered.slice().sort((a, b) => {
+          const ta = (a.timeParsed ?? new Date(a.time)).getTime()
+          const tb = (b.timeParsed ?? new Date(b.time)).getTime()
+          const da = Math.abs(ta - nowMs)
+          const db = Math.abs(tb - nowMs)
+          if (da !== db) return da - db
+          // tie-breaker: prefer the later hour (future) to show upcoming hours first
+          return ta - tb
+        })
+        hours.value = sorted
+        currentVisibleIdx.value = 0
+      }
     }
   } catch {
     error.value = 'خطا در دریافت دادهٔ آب و هوا'
@@ -153,15 +190,7 @@ async function loadHours() {
   }
 }
 
-// react to day changes
-watch(
-  () => ui.selectedDayIndex,
-  () => {
-    // reload hours for the new selected day
-    loadHours()
-  },
-)
-
+// load for the initial mount
 await loadHours()
 
 // when mounted, scroll the container so the current card is visible/centered
@@ -170,9 +199,6 @@ onMounted(async () => {
   // small delay to ensure children measured
   await new Promise((r) => setTimeout(r, 30))
   if (!containerRef.value) return
-  const idx = currentVisibleIdx.value
-  if (idx == null) return
-  // after rotation current card is at index 0 — scroll to left
   const container = containerRef.value
   container.scrollTo({ left: 0, behavior: 'smooth' })
 })
@@ -208,7 +234,7 @@ onMounted(async () => {
               class="flex items-center justify-center text-sm font-bold text-gray-500 bg-slate-400/20 w-2/3 rounded-3xl py-0.5 mb-1 gap-1"
             >
               <span class="pt-0.5">{{
-                formatHour(h.timeParsed ?? new Date(h.time), props.city.timezone).toString()
+                formatHour(h.timeParsed ?? new Date(h.time), props.city.timezone)
               }}</span>
               <ClockIcon class="size-4" />
             </p>
@@ -222,8 +248,8 @@ onMounted(async () => {
               "
               :alt="mapWeatherCodeToFarsi((h.values.weathercode ?? 0) as number).title"
             />
-            <p class="text-2xl font-semibold text-slate-800">
-              {{ (h.values.temperature_2m ?? 0).toFixed(0) }}°
+            <p dir="ltr" class="text-2xl font-semibold text-slate-800">
+              {{ (h.values.temperature_2m ?? 0).toFixed(1) }}°
             </p>
             <p class="text-xs text-gray-500 flex items-center justify-center gap-1">
               <HumidityIcon

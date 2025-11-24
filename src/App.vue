@@ -10,7 +10,7 @@ const route = useRoute()
     <section v-if="route.name != 'home'" class="app-bar">
       <BackButton />
       <h1 class="text-slate-500 font-semibold text-lg w-full text-center">
-        {{ route.meta.title ?? 'هوا چطوره؟' }}
+        {{ route.meta.title ?? 'هوای من' }}
       </h1>
       <span class="w-6" />
     </section>
@@ -54,6 +54,6 @@ const route = useRoute()
   @apply w-full pb-4 pt-2 flex items-center justify-between flex-none;
 }
 .app-container {
-  @apply w-full max-h-dvh h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gray-100 font-vazir gap-1;
+  @apply w-full max-w-[480px] mx-auto max-h-dvh h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gray-200/60 font-vazir gap-1;
 }
 </style>

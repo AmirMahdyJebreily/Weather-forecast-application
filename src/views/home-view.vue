@@ -5,11 +5,14 @@ import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import type { City } from '@/stores/weather'
 import BaseModal from '@/components/base-modal.vue'
 import DaySelector from '@/components/day-selector.vue'
-import { MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { useUiStore } from '@/stores/ui'
+import { InformationCircleIcon, MapPinIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { PlusIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/solid'
 import { useScrollShrink } from '@/composables/useScrollShrink'
+import { views } from '@/router'
 
 const store = useWeatherStore()
+const ui = useUiStore()
 
 const el = useTemplateRef('scroller')
 
@@ -33,7 +36,7 @@ const headerStyle = computed(() => ({
 /* modal state for delete confirmation */
 const modalVisible = ref(false)
 const modalCity = ref<City | null>(null)
-const expandedCityId = ref<string | null>(null)
+const expandedCityId = ref<string | null>(null) // stored as `${selectedDayIndex}:${cityId}`
 const NOW_ONLY: string[] = ['now-status']
 const NOW_AND_HOURLY: string[] = ['now-status', 'hourly-status']
 
@@ -51,7 +54,8 @@ function confirmDelete() {
 }
 
 function toggleExpand(cityId: string) {
-  expandedCityId.value = expandedCityId.value === cityId ? null : cityId
+  const key = `${ui.selectedDayIndex}:${cityId}`
+  expandedCityId.value = expandedCityId.value === key ? null : key
 }
 
 // double-tap detection for touch devices and dblclick for mouse
@@ -103,7 +107,10 @@ function onCardDblClick(id: string) {
 watch(expandedCityId, async (id) => {
   await nextTick()
   if (!id) return
-  const el = document.querySelector(`[data-card-id="${id}"]`) as HTMLElement | null
+  // `id` is stored as `${selectedDayIndex}:${cityId}`. extract cityId (may contain colons)
+  const sep = id.indexOf(':')
+  const cityId = sep >= 0 ? id.slice(sep + 1) : id
+  const el = document.querySelector(`[data-card-id="${cityId}"]`) as HTMLElement | null
   if (!el) return
   // scroll the card into center of viewport smoothly
   el.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -121,8 +128,11 @@ watch(expandedCityId, async (id) => {
       <h1
         class="header-title text-right text-2xl flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
       >
-        هوا چطوره؟
+        هوای من
       </h1>
+      <RouterLink class="absolute top-2 left-3 bg-gray-300 p-0.5 rounded-full" :to="views.ABOUTUS"
+        ><InformationCircleIcon class="size-6" />
+      </RouterLink>
       <DaySelector />
     </div>
   </header>
@@ -143,11 +153,13 @@ watch(expandedCityId, async (id) => {
           @touchstart.passive="onCardTouchStart"
           @touchend.passive="(e) => onCardTouchEnd(e, value.id)"
           @dblclick.prevent="() => onCardDblClick(value.id)"
-          :aria-expanded="expandedCityId === value.id"
+          :aria-expanded="expandedCityId === ui.selectedDayIndex + ':' + value.id"
         >
           <BaseCityCard
             :city="value"
-            :modules-raw="expandedCityId === value.id ? NOW_AND_HOURLY : NOW_ONLY"
+            :modules-raw="
+              expandedCityId === ui.selectedDayIndex + ':' + value.id ? NOW_AND_HOURLY : NOW_ONLY
+            "
           >
             <template #actions>
               <button
