@@ -54,6 +54,6 @@ const route = useRoute()
   @apply w-full pb-4 pt-2 flex items-center justify-between flex-none;
 }
 .app-container {
-  @apply w-full max-w-[480px] max-h-dvh h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gray-200/60 font-vazir gap-1;
+  @apply w-full max-w-[480px] mx-auto max-h-dvh h-dvh px-4 pl-3 py-2 overflow-hidden flex flex-col items-center justify-start bg-gray-200/60 font-vazir gap-1;
 }
 </style>
