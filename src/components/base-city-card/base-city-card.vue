@@ -91,7 +91,7 @@ function leave(el: Element, done: () => void) {
 
 <template>
   <div
-    class="city-card flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-tl from-slate-50/50 to-slate-200/50 rounded-3xl border border-slate-200 shadow gap-2 py-4 px-6"
+    class="city-card flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-tl from-gray-50/50 to-slate-100/50 rounded-3xl border border-gray-300 shadow gap-2 py-4 px-6"
   >
     <div class="flex items-center justify-between w-full">
       <span class="flex items-start justify-center gap-2 w-full" @click="toggleShowCityInfo">
