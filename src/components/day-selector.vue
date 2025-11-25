@@ -178,7 +178,7 @@ watch(
           ui.selectedDayIndex === d.index
             ? ' text-sky-700 transform scale-105 border-y box-content border-gray-300'
             : [
-                'hover:bg-slate-50 text-gray-400',
+                'hover:bg-slate-50 text-gray-300/80',
                 {
                   'hidden-when-compact': props.isCompact && ui.selectedDayIndex !== d.index,
                 },
@@ -226,9 +226,9 @@ watch(
   text-align: center;
   cursor: pointer;
   transition:
-    transform 160ms ease,
-    border 160ms ease 50ms,
-    color 160ms ease;
+    transform 70ms ease,
+    border 70ms ease 22ms,
+    color 70ms ease;
   flex-shrink: 0;
   display: inline-block;
 }

@@ -18,8 +18,8 @@ const el = useTemplateRef('scroller')
 
 enum HomePageScrollShrinks {
   MAX_HEIGHT = 210,
-  MIN_HEIGHT = 65,
-  MAX_SCROLL = (MAX_HEIGHT + MIN_HEIGHT) / 2,
+  MIN_HEIGHT = 70,
+  MAX_SCROLL = (MAX_HEIGHT + MIN_HEIGHT) / 3,
 }
 
 // تعریف یک تابع سفارشی (مثلاً قوی‌تر)
@@ -34,7 +34,7 @@ const { height } = useScrollShrink(
   el,
   HomePageScrollShrinks.MAX_HEIGHT,
   HomePageScrollShrinks.MIN_HEIGHT,
-  0.9, // resistanceFactor
+  0.2, // resistanceFactor
   customEase, // easeFn
   HomePageScrollShrinks.MAX_SCROLL,
 )
@@ -160,7 +160,7 @@ watch(expandedCityId, async (id) => {
         height: HomePageScrollShrinks.MAX_HEIGHT + 'px',
       }"
     ></div>
-    <div class="w-full md:w-1/2 flex flex-col items-center justify-start gap-3 flex-1 h-full px-2">
+    <div class="w-full md:w-1/2 flex flex-col items-center justify-start gap-3 flex-1 h-full px-4">
       <transition-group name="fav" tag="div" class="w-full flex flex-col gap-3">
         <div
           v-for="value in store.favorites"

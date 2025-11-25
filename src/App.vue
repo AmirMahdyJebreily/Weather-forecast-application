@@ -51,9 +51,9 @@ const route = useRoute()
 
 <style lang="css" scoped>
 .app-bar {
-  @apply w-full pb-4 pt-2 flex items-center justify-between flex-none;
+  @apply w-full pb-4 pt-2 px-3 flex items-center justify-between flex-none;
 }
 .app-container {
-  @apply w-dvw max-h-dvh h-dvh py-2 overflow-hidden flex flex-col items-center justify-start bg-white font-vazir gap-1;
+  @apply w-dvw max-h-dvh h-dvh pt-2 px-1 overflow-hidden flex flex-col items-center justify-start bg-white font-vazir gap-1;
 }
 </style>
