@@ -198,7 +198,8 @@ watch(
 .day-selector {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
