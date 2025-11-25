@@ -142,16 +142,12 @@ watch(expandedCityId, async (id) => {
           class="header-title text-right text-2xl flex items-center justify-center gap-x-2 flex-none sm:text-3xl font-extrabold text-slate-700 [container-type:height] [&:container(height>150px)]:text-4xl [&:container(height>200px)]:text-5xl"
         >
           <span>هوای من</span>
-          <RouterLink class="header-info-link bg-gray-300 p-0.5 rounded-full" :to="views.ABOUTUS"
-            ><InformationCircleIcon class="size-5" />
+          <RouterLink class="header-info-link bg-gray-100 p-0.5 rounded-full" :to="views.ABOUTUS"
+            ><InformationCircleIcon class="size-6" />
           </RouterLink>
         </h1>
 
-        <DaySelector
-          :is-compact="
-            height < (HomePageScrollShrinks.MAX_HEIGHT + HomePageScrollShrinks.MIN_HEIGHT) / 2
-          "
-        />
+        <DaySelector :is-compact="height < HomePageScrollShrinks.MAX_SCROLL" />
       </div>
     </header>
     <div
@@ -192,13 +188,15 @@ watch(expandedCityId, async (id) => {
             </BaseCityCard>
           </div>
         </div>
+        <div
+          class="flex-none"
+          :style="{
+            height: HomePageScrollShrinks.MAX_HEIGHT - HomePageScrollShrinks.MAX_HEIGHT / 10 + 'px',
+          }"
+        >
+          <p class="text-gray-800 font-thin text-center">برای افزودن بیشتر، روی دکمه + بزنید</p>
+        </div>
       </transition-group>
-      <br />
-      <br />
-      <br />
-      <br />
-      <br />
-      <br />
       <div
         class="flex flex-col items-center justify-center gap-1 h-4/5 text-slate-500/80"
         v-if="store.favorites.length < 1 && !store.loadingSearch"
@@ -306,7 +304,7 @@ header {
   }
 
   .header-info-link {
-    @apply absolute top-4 left-4;
+    @apply absolute top-4 right-4;
   }
 }
 

@@ -91,12 +91,12 @@ function leave(el: Element, done: () => void) {
 
 <template>
   <div
-    class="city-card flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-t from-gray-100/70 to-gray-100/70 via-gray-100 backdrop-blur-xl rounded-3xl gap-2 py-4 px-6"
+    class="city-card flex flex-col items-stretch justify-stretch text-sky-800 w-full bg-gradient-to-t from-gray-100/80 to-gray-100/80 via-gray-100 border-2 border-gray-100 backdrop-blur-xl rounded-3xl gap-2 py-4 px-6"
   >
     <div class="flex items-center justify-between w-full">
       <span class="flex items-start justify-center gap-2 w-full" @click="toggleShowCityInfo">
         <span
-          class="size-8 text-sky-700 flex-none flex items-center justify-center bg-slate-400/35 rounded-full"
+          class="size-8 text-sky-700/70 flex-none flex items-center justify-center bg-slate-400/30 rounded-full"
         >
           <MapPinIcon class="size-5 inline-block m-auto" />
         </span>
