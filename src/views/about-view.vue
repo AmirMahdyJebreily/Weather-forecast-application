@@ -1,5 +1,5 @@
 <template>
-  <div class="flex justify-center w-full items-center gap-2 mb-4 mt-auto pt-16">
+  <div class="flex justify-center w-full items-center gap-2 mb-4 mt-auto pt-16 px-4">
     <img
       src="@/../public/logotext-black-transparent-withboy.png"
       class="mx-auto grayscale brightness-0 w-3/5"
@@ -18,7 +18,7 @@
     <br />
     <strong class="font-medium">هوای دلتان همیشه صاف 🩵🌤</strong>
   </p>
-  <div class="grid grid-rows-1 grid-cols-3 w-full my-3 gap-3 mt-auto">
+  <div class="grid grid-rows-1 grid-cols-3 w-2/3 my-3 gap-3 mt-auto">
     <a
       href="https://www.nasim-mehr.ir"
       target="_blank"
