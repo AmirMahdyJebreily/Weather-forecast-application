@@ -17,9 +17,9 @@ const ui = useUiStore()
 const el = useTemplateRef('scroller')
 
 enum HomePageScrollShrinks {
-  MAX_HEIGHT = 190,
-  MIN_HEIGHT = 60,
-  MAX_SCROLL = (MAX_HEIGHT + MIN_HEIGHT) / 4,
+  MAX_HEIGHT = 210,
+  MIN_HEIGHT = 65,
+  MAX_SCROLL = (MAX_HEIGHT + MIN_HEIGHT) / 2,
 }
 
 // تعریف یک تابع سفارشی (مثلاً قوی‌تر)
@@ -34,8 +34,9 @@ const { height } = useScrollShrink(
   el,
   HomePageScrollShrinks.MAX_HEIGHT,
   HomePageScrollShrinks.MIN_HEIGHT,
-  0.6, // resistanceFactor
+  0.9, // resistanceFactor
   customEase, // easeFn
+  HomePageScrollShrinks.MAX_SCROLL,
 )
 const headerStyle = computed(() => ({
   height: height.value ? height.value.toFixed(0) + 'px' : 'auto',
@@ -128,10 +129,10 @@ watch(expandedCityId, async (id) => {
 <template>
   <div
     ref="scroller"
-    class="w-full overflow-y-auto overflow-hidden scroll-py-2 flex flex-col items-center h-full justify-start"
+    class="w-dvw overflow-y-auto overflow-hidden scroll-py-2 flex flex-col items-center h-full justify-start"
   >
     <header
-      class="w-dvw flex-none fixed top-0 left-0 z-50 backdrop-blur-lg bg-gray-100/90 shadow-inner border-b border-gray-300 rounded-b-[35px] transition-[height] pt-8 ease-out container flex-col flex gap-y-4 scrollbar-mobile items-center justify-end"
+      class="w-full flex-none fixed top-0 z-50 backdrop-blur-lg bg-gradient-to-t from-white to-slate-50 transition-[height] pt-8 ease-out container flex-col flex gap-y-4 scrollbar-mobile items-center justify-end"
       :style="{ ...headerStyle, willChange: 'scroll-position' }"
     >
       <div
@@ -159,7 +160,7 @@ watch(expandedCityId, async (id) => {
         height: HomePageScrollShrinks.MAX_HEIGHT + 'px',
       }"
     ></div>
-    <div class="w-full flex flex-col items-center justify-start gap-3 flex-1 h-full px-2 py-5">
+    <div class="w-full md:w-1/2 flex flex-col items-center justify-start gap-3 flex-1 h-full px-2">
       <transition-group name="fav" tag="div" class="w-full flex flex-col gap-3">
         <div
           v-for="value in store.favorites"
@@ -183,7 +184,7 @@ watch(expandedCityId, async (id) => {
               <template #actions>
                 <button
                   @click.stop="requestDelete(value)"
-                  class="flex items-center justify-center flex-none p-2 rounded-full bg-rose-200/20"
+                  class="flex items-center justify-center flex-none rounded-full"
                 >
                   <TrashIcon class="size-5 text-rose-600" />
                 </button>
