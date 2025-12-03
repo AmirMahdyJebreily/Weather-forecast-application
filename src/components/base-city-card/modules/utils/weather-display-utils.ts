@@ -73,3 +73,26 @@ export function getWeatherIconUrl(code: number, isoTime: string) {
   const icon = isNight ? (icon_night ?? icon_day) : (icon_day ?? icon_night)
   return `https://www.accuweather.com/assets/images/weather-icons/v2a/${icon}.svg`
 }
+/**
+ * تبدیل عدد AQI به وضعیت متنی فارسی و رنگ
+ * استاندارد US AQI
+ */
+export function getAqiStatus(aqi: number) {
+  if (aqi <= 50) return { label: 'پاک', color: 'bg-emerald-500', text: 'text-emerald-700', bgLight: 'bg-emerald-100' }
+  if (aqi <= 100) return { label: 'قابل قبول', color: 'bg-yellow-500', text: 'text-yellow-700', bgLight: 'bg-yellow-100' }
+  if (aqi <= 150) return { label: 'ناسالم برای گروه‌های حساس', color: 'bg-orange-500', text: 'text-orange-700', bgLight: 'bg-orange-100' }
+  if (aqi <= 200) return { label: 'ناسالم', color: 'bg-red-500', text: 'text-red-700', bgLight: 'bg-red-100' }
+  if (aqi <= 300) return { label: 'بسیار ناسالم', color: 'bg-purple-500', text: 'text-purple-700', bgLight: 'bg-purple-100' }
+  return { label: 'خطرناک', color: 'bg-rose-900', text: 'text-rose-900', bgLight: 'bg-rose-200' }
+}
+
+/**
+ * تفسیر شاخص UV
+ */
+export function getUvDescription(uv: number) {
+  if (uv <= 2) return 'پایین'
+  if (uv <= 5) return 'متوسط'
+  if (uv <= 7) return 'بالا'
+  if (uv <= 10) return 'خیلی بالا'
+  return 'خطرناک'
+}
