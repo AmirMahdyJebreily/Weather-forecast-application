@@ -1,5 +1,5 @@
 <script async setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { useWeatherStore, type City, type SimpleHourlyPoint } from '@/stores/weather'
 import HumidityIcon from '../../../../public/icons/humidity-svgrepo-com.svg'
@@ -8,9 +8,7 @@ import { ClockIcon } from '@heroicons/vue/24/outline'
 const props = withDefaults(
   defineProps<{
     city: City
-    /** how many hours to show forward from current (default 24) */
     rangeHours?: number
-    /** how many hours to include from the past (default 0) */
     pastHours?: number
   }>(),
   { rangeHours: 24, pastHours: 0 },
@@ -26,6 +24,7 @@ const store = useWeatherStore()
 const ui = useUiStore()
 
 function mapWeatherCodeToFarsi(code: number) {
+  // ... (همان مپ قبلی بدون تغییر) ...
   const weatherMap: Record<
     number,
     { title: string; description: string; icon_day?: number; icon_night?: number }
@@ -64,7 +63,6 @@ function mapWeatherCodeToFarsi(code: number) {
     96: { title: 'رعد و برق', description: 'با تگرگ خفیف', icon_day: 15, icon_night: 15 },
     99: { title: 'رعد و برق', description: 'با تگرگ شدید', icon_day: 15, icon_night: 15 },
   }
-
   return (
     weatherMap[code] ?? {
       title: 'نامشخص',
@@ -75,47 +73,84 @@ function mapWeatherCodeToFarsi(code: number) {
   )
 }
 
-function getWeatherIconUrl(code: number, date: Date) {
+// Helper: استخراج ساعت (عدد 0 تا 23) از رشته ایزو "YYYY-MM-DDTHH:00"
+function getHourFromIso(isoTime: string): number {
+  if (!isoTime) return 0
+  const parts = isoTime.split('T')
+  if (parts.length < 2) return 0
+  return parseInt(parts[1]!.substring(0, 2), 10)
+}
+
+// Helper: استخراج تاریخ "YYYY-MM-DD" از رشته ایزو
+function getDateStrFromIso(isoTime: string): string {
+  if (!isoTime) return ''
+  return isoTime.split('T')[0]!
+}
+
+function getWeatherIconUrl(code: number, isoTime: string) {
   const { icon_day, icon_night } = mapWeatherCodeToFarsi(code)
-  const hour = date.getHours()
+  const hour = getHourFromIso(isoTime)
+  // فرض ساده: ۶ صبح تا ۶ عصر روز است. برای دقت بیشتر می‌توان از sunrise/sunset استفاده کرد.
   const isNight = hour < 6 || hour >= 18
   const icon = isNight ? (icon_night ?? icon_day) : (icon_day ?? icon_night)
   return `https://www.accuweather.com/assets/images/weather-icons/v2a/${icon}.svg`
 }
 
-function formatHour(date: Date, timeZone?: string) {
-  try {
-    const dtf = new Intl.DateTimeFormat('fa-IR', {
-      hour: 'numeric',
-      hour12: false,
-      timeZone: timeZone ?? 'UTC',
-    })
-    return dtf.format(date)
-  } catch {
-    return date.getHours().toString()
-  }
+function formatHourDisplay(isoTime: string) {
+  // فقط ساعت را از رشته برمی‌داریم. چون رشته محلی است، نیازی به Intl نیست.
+  const h = getHourFromIso(isoTime)
+  return `${h}:00`
 }
 
-function getYMD(date: Date, timeZone?: string) {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: timeZone ?? 'UTC',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-  }).formatToParts(date)
+/**
+ * محاسبه تاریخِ هدف بر اساس selectedDayIndex
+ * selectedDayIndex=0 یعنی امروز، 1 یعنی فردا و ...
+ */
+function getTargetDateString(timezone: string, dayIndex: number): string {
+  const now = new Date()
+  // اضافه کردن روزها به زمان حال
+  now.setDate(now.getDate() + dayIndex)
 
-  let year = 0
-  let month = 0
-  let day = 0
-  for (const p of parts) {
-    if (p.type === 'year') year = Number(p.value)
-    else if (p.type === 'month') month = Number(p.value) - 1
-    else if (p.type === 'day') day = Number(p.value)
-  }
-  return { year, month, day }
+  // فرمت کردن به YYYY-MM-DD در تایم‌زون مقصد
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+
+  const p: Record<string, string> = {}
+  parts.forEach(({ type, value }) => {
+    p[type] = value
+  })
+  return `${p.year}-${p.month}-${p.day}`
+}
+
+/**
+ * پیدا کردن "همین الان" به وقت شهر مقصد به فرمت YYYY-MM-DDTHH:00
+ */
+function getCurrentCityTimeIso(timezone: string): string {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+
+  const p: Record<string, string> = {}
+  parts.forEach(({ type, value }) => {
+    p[type] = value
+  })
+
+  const h = p.hour === '24' ? '00' : p.hour
+  return `${p.year}-${p.month}-${p.day}T${h}:00`
 }
 
 async function loadHours() {
+  debugger
   loading.value = true
   error.value = null
   try {
@@ -126,81 +161,89 @@ async function loadHours() {
       return
     }
 
-    // determine today's YMD in the city's timezone
-    const nowParts = getYMD(new Date(), props.city.timezone)
+    // 1. پیدا کردن تاریخِ روز انتخابی (امروز/فردا/...) به وقت شهر مقصد
+    const targetDateStr = getTargetDateString(props.city.timezone ?? 'UTC', ui.selectedDayIndex)
 
+    // 2. فیلتر کردن نقاطی که تاریخشان با تاریخ هدف یکی است
+    // نکته: p.time در Open-Meteo همیشه لوکال است، پس مستقیم مقایسه می‌کنیم.
     const filtered = simple.hourly.filter((p) => {
-      const d = p.timeParsed ?? new Date(p.time)
-      const pParts = getYMD(d, props.city.timezone)
-      const dateA = Date.UTC(nowParts.year, nowParts.month, nowParts.day)
-      const dateB = Date.UTC(pParts.year, pParts.month, pParts.day)
-      const dayOffset = Math.round((dateB - dateA) / (24 * 60 * 60 * 1000))
-      return dayOffset === ui.selectedDayIndex
+      const pDateStr = getDateStrFromIso(p.time)
+      console.log(pDateStr, targetDateStr)
+
+      return pDateStr === targetDateStr
     })
 
     if (filtered.length === 0) {
-      error.value = 'دادهٔ ساعتی در دسترس نیست'
+      // اگر برای روزهای آینده دیتا نداشتیم (مثلاً forecast_days=1 بود ولی ui.selectedDayIndex=2 بود)
+      if (ui.selectedDayIndex > 0) {
+        error.value = 'داده برای این روز موجود نیست'
+      } else {
+        error.value = 'دادهٔ ساعتی یافت نشد'
+      }
       hours.value = []
       currentVisibleIdx.value = null
     } else {
-      // Prefer an exact client-local hour match first (if present), otherwise sort by proximity to client's current time
-      const nowClient = new Date()
+      // 3. مرتب‌سازی یا چرخش لیست
+      // اگر روز "امروز" (selectedDayIndex === 0) باشد، می‌خواهیم از ساعت فعلی شروع شود.
+      // اگر روزهای آینده باشد، از ساعت 00:00 شروع شود (که پیش‌فرض مرتب است).
 
-      // try to find exact hour match in client's local time
-      let exactIdx = -1
-      for (let i = 0; i < filtered.length; i++) {
-        const p = filtered[i]!
-        const d = p.timeParsed ?? new Date(p.time)
-        if (
-          d.getFullYear() === nowClient.getFullYear() &&
-          d.getMonth() === nowClient.getMonth() &&
-          d.getDate() === nowClient.getDate() &&
-          d.getHours() === nowClient.getHours()
-        ) {
-          exactIdx = i
-          break
+      if (ui.selectedDayIndex === 0) {
+        const currentCityIso = getCurrentCityTimeIso(props.city.timezone ?? 'UTC')
+
+        // پیدا کردن اندیس ساعت فعلی در لیست فیلتر شده
+        const exactIdx = filtered.findIndex((p) => p.time === currentCityIso)
+
+        if (exactIdx >= 0) {
+          // چرخش: ساعت فعلی بیاید اول لیست
+          // برش از فعلی تا آخر + برش از اول تا قبل از فعلی
+          hours.value = filtered.slice(exactIdx).concat(filtered.slice(0, exactIdx))
+          currentVisibleIdx.value = 0 // کارت اول، هایلایت شود
+        } else {
+          // اگر ساعت دقیق پیدا نشد (مثلاً ساعت فعلی از لیست رد شده یا هنوز نرسیده)،
+          // نزدیک‌ترین ساعت آینده را پیدا می‌کنیم
+          const currentHour = getHourFromIso(currentCityIso)
+          const nextIdx = filtered.findIndex((p) => getHourFromIso(p.time) > currentHour)
+
+          if (nextIdx >= 0) {
+            hours.value = filtered.slice(nextIdx).concat(filtered.slice(0, nextIdx))
+            currentVisibleIdx.value = 0
+          } else {
+            // اگر همه ساعات گذشته‌اند (آخر شب)، همان لیست را نشان بده
+            hours.value = filtered
+            currentVisibleIdx.value = null
+          }
         }
-      }
-
-      if (exactIdx >= 0) {
-        // rotate so exact hour is first, preserving chronological order after it
-        hours.value = filtered.slice(exactIdx).concat(filtered.slice(0, exactIdx))
-        currentVisibleIdx.value = 0
       } else {
-        // sort by absolute time distance to client's now
-        const nowMs = nowClient.getTime()
-        const sorted = filtered.slice().sort((a, b) => {
-          const ta = (a.timeParsed ?? new Date(a.time)).getTime()
-          const tb = (b.timeParsed ?? new Date(b.time)).getTime()
-          const da = Math.abs(ta - nowMs)
-          const db = Math.abs(tb - nowMs)
-          if (da !== db) return da - db
-          // tie-breaker: prefer the later hour (future) to show upcoming hours first
-          return ta - tb
-        })
-        hours.value = sorted
-        currentVisibleIdx.value = 0
+        // برای روزهای دیگر، ترتیب معمولی (۰۰:۰۰ تا ۲۳:۰۰)
+        hours.value = filtered
+        currentVisibleIdx.value = null // هیچ کارتی به عنوان "الان" هایلایت نشود
       }
     }
-  } catch {
-    error.value = 'خطا در دریافت دادهٔ آب و هوا'
+  } catch (e) {
+    console.error(e)
+    error.value = 'خطا در پردازش داده‌ها'
     hours.value = []
   } finally {
     loading.value = false
   }
 }
 
+// Watch for prop/store changes to reload
+watch(
+  () => [props.city, ui.selectedDayIndex],
+  async () => {
+    await loadHours()
+  },
+)
+
 // load for the initial mount
 await loadHours()
 
-// when mounted, scroll the container so the current card is visible/centered
 onMounted(async () => {
   await nextTick()
-  // small delay to ensure children measured
   await new Promise((r) => setTimeout(r, 30))
   if (!containerRef.value) return
-  const container = containerRef.value
-  container.scrollTo({ left: 0, behavior: 'smooth' })
+  containerRef.value.scrollTo({ left: 0, behavior: 'smooth' })
 })
 </script>
 
@@ -217,48 +260,47 @@ onMounted(async () => {
     </template>
 
     <template v-else-if="error">
-      <p class="text-sm text-red-500">{{ error }}</p>
+      <div
+        class="flex items-center justify-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-300"
+      >
+        <p class="text-sm text-slate-400">{{ error }}</p>
+      </div>
     </template>
 
     <template v-else>
-      <div ref="containerRef" class="overflow-x-auto -mx-1 py-2">
+      <div ref="containerRef" class="overflow-x-auto -mx-1 py-2 dir-ltr-scroll">
         <TransitionGroup name="hour-fade" tag="div" class="flex gap-3 px-1">
           <div
             v-for="(h, idx) in hours"
-            :key="h.time + '-' + idx"
-            class="hour-card w-28 flex-shrink-0 bg-white rounded-xl p-3 text-center shadow"
-            :class="{ 'current-card': idx === currentVisibleIdx }"
-            :data-visible-idx="idx"
+            :key="h.time"
+            class="hour-card w-28 flex-shrink-0 bg-white rounded-xl p-3 text-center shadow transition-all duration-300"
+            :class="{
+              'current-card ring-2 ring-sky-400 ring-offset-2':
+                idx === currentVisibleIdx && ui.selectedDayIndex === 0,
+            }"
           >
             <p
-              class="flex items-center justify-center text-sm font-bold text-gray-500 bg-slate-400/20 w-2/3 rounded-3xl py-0.5 mb-1 gap-1"
+              class="flex items-center justify-center text-sm font-bold text-gray-500 bg-slate-100 w-2/3 rounded-3xl py-1 mb-2 gap-1 mx-auto"
             >
-              <span class="pt-0.5">{{
-                formatHour(h.timeParsed ?? new Date(h.time), props.city.timezone)
-              }}</span>
-              <ClockIcon class="size-4" />
+              <span class="pt-0.5">{{ formatHourDisplay(h.time) }}</span>
+              <ClockIcon class="size-3.5" />
             </p>
+
             <img
-              class="mx-auto size-8 mb-1"
-              :src="
-                getWeatherIconUrl(
-                  (h.values.weathercode ?? 0) as number,
-                  h.timeParsed ?? new Date(h.time),
-                )
-              "
+              class="mx-auto size-10 mb-2 object-contain"
+              :src="getWeatherIconUrl((h.values.weathercode ?? 0) as number, h.time)"
               :alt="mapWeatherCodeToFarsi((h.values.weathercode ?? 0) as number).title"
+              loading="lazy"
             />
-            <p dir="ltr" class="text-2xl font-semibold text-slate-800">
-              {{ (h.values.temperature_2m ?? 0).toFixed(1) }}°
+
+            <p dir="ltr" class="text-2xl font-bold text-slate-800 mb-1">
+              {{ Math.round(h.values.temperature_2m ?? 0) }}°
             </p>
-            <p class="text-xs text-gray-500 flex items-center justify-center gap-1">
-              <HumidityIcon
-                class="inline-block w-4 h-4 fill-current text-slate-700 mr-1"
-                role="img"
-                aria-label="رطوبت"
-              />
-              {{ h.values.relativehumidity_2m ?? '-' }}%
-            </p>
+
+            <div class="text-xs text-gray-500 flex items-center justify-center gap-1 mt-auto">
+              <HumidityIcon class="w-3.5 h-3.5 fill-slate-400" />
+              <span>{{ h.values.relativehumidity_2m ?? '-' }}%</span>
+            </div>
           </div>
         </TransitionGroup>
       </div>
@@ -268,46 +310,52 @@ onMounted(async () => {
 
 <style scoped lang="css">
 .hourly-module {
-  /* keep module compact */
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
+
+/* اسکرول افقی تمیز */
+.dir-rtl-scroll {
+  direction: rtl; /* مهم: اسکرول بار سمت راست نماند */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* استایل کارت‌ها */
 .hour-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.25rem;
+  min-height: 10rem; /* ارتفاع ثابت برای یکدستی */
 }
-.hour-card.current-card {
-  border: 2px solid rgba(14, 164, 233, 0.219); /* sky-500 */
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.12);
+.hour-card:hover {
+  transform: translateY(-2px);
 }
-/* hide default scrollbar on webkit but keep scroll functionality */
-.hourly-module::-webkit-scrollbar {
-  height: 8px;
-}
-.hourly-module::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.4);
-  border-radius: 9999px;
-}
-</style>
 
-<style scoped>
+/* Custom Scrollbar */
+.hourly-module ::-webkit-scrollbar {
+  height: 6px;
+}
+.hourly-module ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hourly-module ::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.hourly-module ::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* Animations */
 .hour-fade-enter-active,
 .hour-fade-leave-active {
-  transition:
-    opacity 220ms ease,
-    transform 220ms ease;
+  transition: all 0.3s ease;
 }
 .hour-fade-enter-from,
 .hour-fade-leave-to {
   opacity: 0;
-  transform: translateY(8px) scale(0.995);
-}
-.hour-fade-enter-to,
-.hour-fade-leave-from {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateY(10px);
 }
 </style>
