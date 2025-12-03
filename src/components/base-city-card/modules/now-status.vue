@@ -1,9 +1,10 @@
 <script async setup lang="ts">
-import { useWeatherStore, type City } from '@/stores/weather'
+import { useWeatherStore } from '@/stores/weather'
 import { nextTick, ref, watch } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import HumidityIcon from '../../../../public/icons/humidity-svgrepo-com.svg'
 import WindIcon from '../../../../public/icons/wind-svgrepo-com.svg'
+import type { City } from '@/stores/models/simple-city-models'
 
 const props = defineProps<{
   city: City

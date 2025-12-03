@@ -1,9 +1,10 @@
 <script async setup lang="ts">
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { useUiStore } from '@/stores/ui'
-import { useWeatherStore, type City, type SimpleHourlyPoint } from '@/stores/weather'
+import { useWeatherStore } from '@/stores/weather'
 import HumidityIcon from '../../../../public/icons/humidity-svgrepo-com.svg'
 import { ClockIcon } from '@heroicons/vue/24/outline'
+import type { City, SimpleHourlyPoint } from '@/stores/models/simple-city-models'
 
 const props = withDefaults(
   defineProps<{

@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import { MapPinIcon } from '@heroicons/vue/24/solid'
-import { classifySettlement, type City } from '@/stores/weather'
+import { classifySettlement } from '@/stores/weather'
 import { defineAsyncComponent, ref, watch } from 'vue'
+import type { City } from '@/stores/models/simple-city-models'
 
 const props = withDefaults(
   defineProps<{
