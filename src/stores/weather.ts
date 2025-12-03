@@ -1,16 +1,18 @@
 // stores/useWeatherStore.ts
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
-// فرض بر این است که این فایل‌ها در مسیر صحیح قرار دارند
+
+// Models
 import * as OpenMeteoRaw from './models/open-meteo-raw-models'
 import * as JebySimple from './models/simple-city-models'
+
+// Utils
+import * as idbUtils from './utils/db-utils'
 
 /* ================= Constants ================= */
 
 const GEOCODING_BASE = 'https://geocoding-api.open-meteo.com/v1/search'
 const FORECAST_BASE = 'https://api.open-meteo.com/v1/forecast'
-const DB_NAME = 'weather_store_v1'
-const DB_VERSION = 1
 const DEFAULT_TTL = 1000 * 60 * 10 // 10 minutes
 const DEFAULT_FORECAST_DAYS = 7
 
@@ -36,65 +38,6 @@ function addDaysToDate(dateStr: string, days: number): string {
   const d = new Date(dateStr)
   d.setDate(d.getDate() + days)
   return d.toISOString().split('T')[0]!
-}
-
-/* ===== IndexedDB tiny wrapper ===== */
-
-async function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onupgradeneeded = () => {
-      const db = req.result
-      if (!db.objectStoreNames.contains('favorites')) db.createObjectStore('favorites', { keyPath: 'id' })
-      if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'id2' }) // id2 احتمالا اشتباه تایپی قدیمی است اما برای حفظ سازگاری دست نمیزنم
-    }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
-}
-
-async function idbPut<T>(storeName: string, value: T): Promise<void> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite')
-    const store = tx.objectStore(storeName)
-    const req = store.put(value)
-    req.onsuccess = () => resolve()
-    req.onerror = () => reject(req.error)
-  })
-}
-
-async function idbGet<T = unknown>(storeName: string, key: string): Promise<T | null> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly')
-    const store = tx.objectStore(storeName)
-    const req = store.get(key)
-    req.onsuccess = () => resolve((req.result ?? null) as T | null)
-    req.onerror = () => reject(req.error)
-  })
-}
-
-async function idbDelete(storeName: string, key: string): Promise<void> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite')
-    const store = tx.objectStore(storeName)
-    const req = store.delete(key)
-    req.onsuccess = () => resolve()
-    req.onerror = () => reject(req.error)
-  })
-}
-
-async function idbGetAll<T = unknown>(storeName: string): Promise<T[]> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly')
-    const store = tx.objectStore(storeName)
-    const req = store.getAll()
-    req.onsuccess = () => resolve((req.result ?? []) as T[])
-    req.onerror = () => reject(req.error)
-  })
 }
 
 /* ===== Forecast Conversion Helper ===== */
@@ -246,10 +189,11 @@ export const useWeatherStore = defineStore('weather', () => {
 
   async function loadFromIndexedDB(): Promise<void> {
     try {
-      const favs = await idbGetAll<JebySimple.City>('favorites')
+      // UPDATE: Use idbUtils
+      const favs = await idbUtils.idbGetAll<JebySimple.City>('favorites')
       favorites.value = favs ?? []
 
-      const cached = await idbGetAll<JebySimple.CacheEntry>('cache')
+      const cached = await idbUtils.idbGetAll<JebySimple.CacheEntry>('cache')
       if (cached && cached.length) {
         for (const e of cached) cache.set(e.id, e)
       }
@@ -259,14 +203,16 @@ export const useWeatherStore = defineStore('weather', () => {
   async function persistCacheEntry(entry: JebySimple.CacheEntry): Promise<void> {
     cache.set(entry.id, entry)
     try {
-      await idbPut('cache', entry)
+      // UPDATE: Use idbUtils
+      await idbUtils.idbPut('cache', entry)
     } catch { /* ignore IDB write errors */ }
   }
 
   async function removeCacheEntry(id: string): Promise<void> {
     cache.delete(id)
     try {
-      await idbDelete('cache', id)
+      // UPDATE: Use idbUtils
+      await idbUtils.idbDelete('cache', id)
     } catch { }
   }
 
@@ -274,7 +220,8 @@ export const useWeatherStore = defineStore('weather', () => {
     const existing = favorites.value.find((f) => f.id === city.id)
     if (!existing) favorites.value.push(city)
     try {
-      await idbPut('favorites', city)
+      // UPDATE: Use idbUtils
+      await idbUtils.idbPut('favorites', city)
     } catch (err) {
       console.error(err)
     }
@@ -284,7 +231,8 @@ export const useWeatherStore = defineStore('weather', () => {
     const idx = favorites.value.findIndex((f) => f.id === id)
     if (idx >= 0) favorites.value.splice(idx, 1)
     try {
-      await idbDelete('favorites', id)
+      // UPDATE: Use idbUtils
+      await idbUtils.idbDelete('favorites', id)
     } catch { }
   }
 
@@ -380,7 +328,7 @@ export const useWeatherStore = defineStore('weather', () => {
             admin1: r.admin1,
             timezone: r.timezone,
             population: r.population
-          } as JebySimple.City // Cast to ensure compatibility if needed
+          } as JebySimple.City
 
           if (cityObj.country_code === 'IR') iranFirst.push(cityObj)
           else others.push(cityObj)
@@ -500,7 +448,8 @@ export const useWeatherStore = defineStore('weather', () => {
     // try IDB
     if (!existing) {
       try {
-        const e = await idbGet<JebySimple.CacheEntry>('cache', key)
+        // UPDATE: Use idbUtils
+        const e = await idbUtils.idbGet<JebySimple.CacheEntry>('cache', key)
         if (e && now() - e.data.fetchedAt < e.ttl) {
           cache.set(key, e)
           return e.data
@@ -549,7 +498,8 @@ export const useWeatherStore = defineStore('weather', () => {
 
     if (!existing) {
       try {
-        const e = await idbGet<JebySimple.CacheEntry>('cache', key)
+        // UPDATE: Use idbUtils
+        const e = await idbUtils.idbGet<JebySimple.CacheEntry>('cache', key)
         if (e && now() - e.data.fetchedAt < e.ttl && e.data.raw) {
           cache.set(key, e)
           return forecastToSimple(e.data.raw)
@@ -624,27 +574,21 @@ export const useWeatherStore = defineStore('weather', () => {
     return result
   }
 
-
-
   /* ===== Favorites (persisted) ===== */
-
 
   async function addFavorite(city: JebySimple.City) {
     if (isFavorite(city)) return
     await persistFavorite(city)
   }
 
-
   async function removeFavorite(cityId: string) {
     await deleteFavoriteFromDB(cityId)
   }
-
 
   async function toggleFavorite(city: JebySimple.City) {
     if (isFavorite(city)) await removeFavorite(city.id)
     else await addFavorite(city)
   }
-
 
   function reorderFavorites(from: number, to: number) {
     const arr = favorites.value
@@ -656,45 +600,36 @@ export const useWeatherStore = defineStore('weather', () => {
       // sync favorites snapshot to IDB (simple approach)
       ; (async () => {
         try {
-          const db = await openDB()
-          const tx = db.transaction('favorites', 'readwrite')
-          const store = tx.objectStore('favorites')
-          store.clear()
-          for (const f of favorites.value) store.put(f)
-        } catch {
-          // ignore
-        }
+          // UPDATE: Use idbUtils
+          await idbUtils.idbClear('favorites')
+          for (const f of favorites.value) await idbUtils.idbPut('favorites', f)
+        } catch { /* ignore */ }
       })()
   }
 
-
   /* ===== Cache ops & helpers ===== */
-
 
   async function removeFromCache(city: JebySimple.City) {
     await removeCacheEntry(cacheKeyFor(city))
   }
 
-
   async function clearCache() {
     cache.clear()
     try {
-      const db = await openDB()
-      const tx = db.transaction('cache', 'readwrite')
-      tx.objectStore('cache').clear()
+      // UPDATE: Use idbUtils
+      await idbUtils.idbClear('cache')
     } catch { }
   }
 
-
   async function getCachedWeatherFromDB(cityId: string): Promise<JebySimple.WeatherData | null> {
     try {
-      const e = await idbGet<JebySimple.CacheEntry>('cache', cityId)
+      // UPDATE: Use idbUtils
+      const e = await idbUtils.idbGet<JebySimple.CacheEntry>('cache', cityId)
       return e ? e.data : null
     } catch {
       return null
     }
   }
-
 
   function cacheSnapshot() {
     const out: Record<string, { ageMs: number; ttl: number }> = {}
