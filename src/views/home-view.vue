@@ -46,7 +46,7 @@ const headerStyle = computed(() => ({
 const modalVisible = ref(false)
 const modalCity = ref<City | null>(null)
 const expandedCityId = ref<string | null>(null) // stored as `${selectedDayIndex}:${cityId}`
-const NOW_ONLY: string[] = ['now-status']
+const NOW_ONLY: string[] = ['now-status', 'expand-status']
 const NOW_AND_HOURLY: string[] = ['now-status', 'hourly-status', 'quality-status']
 
 function requestDelete(city: City) {
