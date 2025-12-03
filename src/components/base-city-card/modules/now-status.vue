@@ -169,7 +169,7 @@ function getIconUrl(code: number, date: Date): string {
       <div class="flex flex-col items-start justify-start h-full py-1">
         <span class="flex items-end justify-start px-2 py-1.5 gap-1">
           <p class="text-sky-700 font-semibold mb-1">C°</p>
-          <p class="font-black text-5xl text-slate-800">
+          <p class="font-black text-5xl text-slate-800" dir="ltr">
             {{ tempereture.toFixed(1) }}
           </p>
         </span>
