@@ -7,7 +7,9 @@ import type {
   CurrentWeather,
   ForecastResponse,
   HourlyBlock,
-  DailyBlock
+  DailyBlock,
+  AirQualityResponse, // New
+  CurrentAirQuality   // New
 } from './open-meteo-raw-models'
 
 /* --- City Entity (App Domain) --- */
@@ -25,21 +27,27 @@ export type City = {
 
 /* --- UI-Optimized Weather Models --- */
 
-/** یک نقطهٔ ساعتی تمیز شده (همراه با Date پارس شده) */
 export type SimpleHourlyPoint = {
   time: string
   timeParsed?: Date
   values: Partial<Record<HourlyParam, number | null>>
 }
 
-/** یک نقطهٔ روزانه تمیز شده */
 export type SimpleDailyPoint = {
   time: string
   timeParsed?: Date
   values: Partial<Record<DailyParam, number | string | null>>
 }
 
-/** ساختار نهایی آب و هوا برای استفاده راحت در کامپوننت‌ها */
+/** ساختار ساده شده برای کیفیت هوای لحظه‌ای (نمایش در کارت‌ها) */
+export type SimpleAirQuality = {
+  aqi?: number // معمولاً US AQI را نگه می‌داریم
+  pm2_5?: number
+  uvIndex?: number
+  // هر پارامتر دیگری که در UI مهم است
+  rawCurrent?: CurrentAirQuality
+}
+
 export type SimpleForecast = {
   latitude: number
   longitude: number
@@ -51,6 +59,9 @@ export type SimpleForecast = {
   hourly: SimpleHourlyPoint[]
   daily: SimpleDailyPoint[]
   raw?: ForecastResponse
+
+  // New: داده‌های ساده شده کیفیت هوا
+  airQuality?: SimpleAirQuality | null
 }
 
 /* --- Cache & Storage Models --- */
@@ -62,6 +73,9 @@ export type WeatherData = {
   daily?: DailyBlock
   current?: CurrentWeather | null
   raw?: ForecastResponse
+
+  // New: ذخیره پاسخ خام کیفیت هوا برای استفاده‌های بعدی (مثل نمودار)
+  airQualityRaw?: AirQualityResponse | null
 }
 
 export type CacheEntry = {

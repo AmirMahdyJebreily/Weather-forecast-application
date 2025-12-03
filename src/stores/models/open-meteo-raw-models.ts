@@ -1,6 +1,6 @@
-// models/open-meteo-raw-model.ts
+// models/open-meteo-raw-models.ts
 
-/* --- Hourly / Daily Parameters --- */
+/* --- Hourly / Daily Parameters (Weather) --- */
 export type HourlyParam =
   | 'temperature_2m'
   | 'relativehumidity_2m'
@@ -38,9 +38,25 @@ export type DailyParam =
   | 'windgusts_10m_max'
   | 'precipitation_hours'
 
+/* --- Air Quality Parameters --- */
+export type AirQualityParam =
+  | 'pm10'
+  | 'pm2_5'
+  | 'carbon_monoxide'
+  | 'nitrogen_dioxide'
+  | 'sulphur_dioxide'
+  | 'ozone'
+  | 'aerosol_optical_depth'
+  | 'dust'
+  | 'uv_index'
+  | 'uv_index_clear_sky'
+  | 'european_aqi'
+  | 'us_aqi'
+
 /* --- Units Objects --- */
 export type HourlyUnits = Partial<Record<HourlyParam | 'time', string>>
 export type DailyUnits = Partial<Record<DailyParam | 'time', string>>
+export type AirQualityUnits = Partial<Record<AirQualityParam | 'time', string>>
 
 /* --- Data Blocks (Raw Arrays) --- */
 export type HourlyBlock = {
@@ -51,7 +67,11 @@ export type DailyBlock = {
   time: string[]
 } & Partial<Record<DailyParam, (number | string)[]>>
 
-/* --- Legacy Current Weather Block --- */
+export type AirQualityBlock = {
+  time: string[]
+} & Partial<Record<AirQualityParam, number[]>>
+
+/* --- Current Blocks --- */
 export type CurrentWeather = {
   temperature: number
   windspeed: number
@@ -59,6 +79,11 @@ export type CurrentWeather = {
   weathercode: number
   time: string
 }
+
+export type CurrentAirQuality = {
+  time: string
+  interval: number
+} & Partial<Record<AirQualityParam, number>>
 
 /* --- Main Forecast Response --- */
 export type ForecastResponse = {
@@ -74,6 +99,20 @@ export type ForecastResponse = {
   hourly?: HourlyBlock
   daily?: DailyBlock
   current_weather?: CurrentWeather
+  [k: string]: unknown
+}
+
+/* --- Air Quality Response --- */
+export type AirQualityResponse = {
+  latitude: number
+  longitude: number
+  generationtime_ms: number
+  utc_offset_seconds: number
+  timezone: string
+  timezone_abbreviation: string
+  hourly_units?: AirQualityUnits
+  hourly?: AirQualityBlock
+  current?: CurrentAirQuality
   [k: string]: unknown
 }
 

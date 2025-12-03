@@ -13,6 +13,8 @@ import * as idbUtils from './utils/db-utils'
 
 const GEOCODING_BASE = 'https://geocoding-api.open-meteo.com/v1/search'
 const FORECAST_BASE = 'https://api.open-meteo.com/v1/forecast'
+const AIR_QUALITY_BASE = 'https://air-quality-api.open-meteo.com/v1/air-quality' // New Endpoint
+
 const DEFAULT_TTL = 1000 * 60 * 10 // 10 minutes
 const DEFAULT_FORECAST_DAYS = 7
 
@@ -42,7 +44,11 @@ function addDaysToDate(dateStr: string, days: number): string {
 
 /* ===== Forecast Conversion Helper ===== */
 
-export function forecastToSimple(f: OpenMeteoRaw.ForecastResponse): JebySimple.SimpleForecast {
+export function forecastToSimple(
+  f: OpenMeteoRaw.ForecastResponse,
+  aq?: OpenMeteoRaw.AirQualityResponse | null // ورودی جدید (اختیاری)
+): JebySimple.SimpleForecast {
+
   const hourlyBlock: OpenMeteoRaw.HourlyBlock = f.hourly ?? { time: [] }
   const dailyBlock: OpenMeteoRaw.DailyBlock = f.daily ?? { time: [] }
 
@@ -69,6 +75,17 @@ export function forecastToSimple(f: OpenMeteoRaw.ForecastResponse): JebySimple.S
     return { time: t, timeParsed: new Date(t), values }
   })
 
+  // پردازش کیفیت هوا (اگر موجود باشد)
+  let simpleAirQuality: JebySimple.SimpleAirQuality | null = null
+  if (aq && aq.current) {
+    simpleAirQuality = {
+      aqi: aq.current['us_aqi'] ?? aq.current['european_aqi'], // اولویت با US AQI
+      pm2_5: aq.current['pm2_5'],
+      uvIndex: aq.current['uv_index'],
+      rawCurrent: aq.current
+    }
+  }
+
   return {
     latitude: f.latitude,
     longitude: f.longitude,
@@ -79,7 +96,8 @@ export function forecastToSimple(f: OpenMeteoRaw.ForecastResponse): JebySimple.S
     current: f.current_weather ?? null,
     hourly,
     daily,
-    raw: f
+    raw: f,
+    airQuality: simpleAirQuality
   }
 }
 
@@ -189,7 +207,6 @@ export const useWeatherStore = defineStore('weather', () => {
 
   async function loadFromIndexedDB(): Promise<void> {
     try {
-      // UPDATE: Use idbUtils
       const favs = await idbUtils.idbGetAll<JebySimple.City>('favorites')
       favorites.value = favs ?? []
 
@@ -203,7 +220,6 @@ export const useWeatherStore = defineStore('weather', () => {
   async function persistCacheEntry(entry: JebySimple.CacheEntry): Promise<void> {
     cache.set(entry.id, entry)
     try {
-      // UPDATE: Use idbUtils
       await idbUtils.idbPut('cache', entry)
     } catch { /* ignore IDB write errors */ }
   }
@@ -211,7 +227,6 @@ export const useWeatherStore = defineStore('weather', () => {
   async function removeCacheEntry(id: string): Promise<void> {
     cache.delete(id)
     try {
-      // UPDATE: Use idbUtils
       await idbUtils.idbDelete('cache', id)
     } catch { }
   }
@@ -220,7 +235,6 @@ export const useWeatherStore = defineStore('weather', () => {
     const existing = favorites.value.find((f) => f.id === city.id)
     if (!existing) favorites.value.push(city)
     try {
-      // UPDATE: Use idbUtils
       await idbUtils.idbPut('favorites', city)
     } catch (err) {
       console.error(err)
@@ -231,20 +245,20 @@ export const useWeatherStore = defineStore('weather', () => {
     const idx = favorites.value.findIndex((f) => f.id === id)
     if (idx >= 0) favorites.value.splice(idx, 1)
     try {
-      // UPDATE: Use idbUtils
       await idbUtils.idbDelete('favorites', id)
     } catch { }
   }
 
   /* ===== Geocoding / search ===== */
-
+  // ... (کد Geocoding بدون تغییر است چون به این قسمت مربوط نیست)
   async function fetchGeocoding(q: string, limit = 10, language = 'en', signal?: AbortSignal, country?: string) {
+    // ... (همان کد قبلی)
     const url = `${GEOCODING_BASE}?name=${encodeURIComponent(q)}&count=${limit}&language=${language}${(country) ? '&country=' + country : ''}`
     const res = await fetch(url, { signal })
     if (!res.ok) throw new Error(`geocoding failed: ${res.status} `)
     return (await res.json()) as OpenMeteoRaw.GeocodingResponse
   }
-
+  // ... (بقیه توابع سرچ و نرمال‌سازی فارسی هم ثابت هستند)
   function normalizePersian(input: string): string {
     if (!input) return input
     const withoutDiacritics = input.replace(/[\u064B-\u0652\u0670\u06D6-\u06ED]/g, '')
@@ -264,6 +278,7 @@ export const useWeatherStore = defineStore('weather', () => {
   }
 
   async function searchCities(query: string, limit = 20, language = 'fa', level?: JebySimple.SettlementLevel) {
+    // ... (همان کد قبلی برای سرچ شهرها)
     if (!query || query.trim().length === 0) {
       searchResults.value = []
       return []
@@ -384,7 +399,7 @@ export const useWeatherStore = defineStore('weather', () => {
     }
   }
 
-  /* ===== Forecast ===== */
+  /* ===== Forecast & Air Quality URL Builders ===== */
 
   function buildForecastUrl(
     lat: number,
@@ -398,6 +413,7 @@ export const useWeatherStore = defineStore('weather', () => {
       forecast_days?: number
     }
   ) {
+    // ... (کد قبلی برای ساخت URL هواشناسی)
     const hourly = (opts?.hourly ?? [
       'temperature_2m', 'relativehumidity_2m', 'apparent_temperature', 'precipitation', 'rain',
       'showers', 'snowfall', 'windspeed_10m', 'winddirection_10m', 'weathercode'
@@ -428,14 +444,25 @@ export const useWeatherStore = defineStore('weather', () => {
       params.set('start_date', todayStr)
       params.set('end_date', endDateStr)
     }
-
     return `${FORECAST_BASE}?${params.toString()}`
+  }
+
+  // New: تابع ساخت URL کیفیت هوا
+  function buildAirQualityUrl(lat: number, lon: number, opts?: { timezone?: string }) {
+    const params = new URLSearchParams({
+      latitude: String(lat),
+      longitude: String(lon),
+      current: 'us_aqi,european_aqi,pm2_5,uv_index', // پارامترهای Current که لازم داریم
+      timezone: opts?.timezone ?? 'auto'
+    })
+    return `${AIR_QUALITY_BASE}?${params.toString()}`
   }
 
   function cacheKeyFor(city: JebySimple.City) {
     return city.id
   }
 
+  /* ===== MAIN FETCH FUNCTION (UPDATED) ===== */
   async function getWeatherForCity(city: JebySimple.City, opts?: { force?: boolean; ttl?: number }): Promise<JebySimple.WeatherData> {
     const key = cacheKeyFor(city)
     const existing = cache.get(key)
@@ -445,10 +472,8 @@ export const useWeatherStore = defineStore('weather', () => {
       return existing.data
     }
 
-    // try IDB
     if (!existing) {
       try {
-        // UPDATE: Use idbUtils
         const e = await idbUtils.idbGet<JebySimple.CacheEntry>('cache', key)
         if (e && now() - e.data.fetchedAt < e.ttl) {
           cache.set(key, e)
@@ -463,10 +488,23 @@ export const useWeatherStore = defineStore('weather', () => {
 
     const promise = (async (): Promise<JebySimple.WeatherData> => {
       try {
-        const url = buildForecastUrl(city.latitude, city.longitude, { timezone: city.timezone ?? 'auto' })
-        const res = await fetch(url)
-        if (!res.ok) throw new Error(`forecast failed: ${res.status} `)
-        const json = (await res.json()) as OpenMeteoRaw.ForecastResponse
+        const forecastUrl = buildForecastUrl(city.latitude, city.longitude, { timezone: city.timezone ?? 'auto' })
+        const airQualityUrl = buildAirQualityUrl(city.latitude, city.longitude, { timezone: city.timezone ?? 'auto' })
+
+        // درخواست موازی (Parallel Fetch) برای سرعت بیشتر
+        const [forecastRes, airRes] = await Promise.all([
+          fetch(forecastUrl),
+          fetch(airQualityUrl)
+        ])
+
+        if (!forecastRes.ok) throw new Error(`forecast failed: ${forecastRes.status}`)
+        // اگر کیفیت هوا فیل شد، نباید کل پروسه را متوقف کند (Optional است)
+        let airData: OpenMeteoRaw.AirQualityResponse | null = null
+        if (airRes.ok) {
+          airData = await airRes.json()
+        }
+
+        const json = (await forecastRes.json()) as OpenMeteoRaw.ForecastResponse
 
         const payload: JebySimple.WeatherData = {
           fetchedAt: now(),
@@ -474,7 +512,8 @@ export const useWeatherStore = defineStore('weather', () => {
           hourly: json.hourly,
           daily: json.daily,
           current: json.current_weather ?? null,
-          raw: json
+          raw: json,
+          airQualityRaw: airData // ذخیره دیتای کیفیت هوا
         }
 
         const entry: JebySimple.CacheEntry = { id: key, data: payload, ttl }
@@ -492,33 +531,37 @@ export const useWeatherStore = defineStore('weather', () => {
   async function getSimpleForecastForCity(city: JebySimple.City, opts?: { force?: boolean; ttl?: number }): Promise<JebySimple.SimpleForecast | null> {
     const key = cacheKeyFor(city)
     const existing = cache.get(key)
+
+    // چک کردن کش حافظه
     if (!opts?.force && existing && now() - existing.data.fetchedAt < existing.ttl && existing.data.raw) {
-      return forecastToSimple(existing.data.raw)
+      // پاس دادن raw forecast و raw air quality برای تبدیل به SimpleForecast
+      return forecastToSimple(existing.data.raw, existing.data.airQualityRaw)
     }
 
+    // چک کردن کش دیتابیس
     if (!existing) {
       try {
-        // UPDATE: Use idbUtils
         const e = await idbUtils.idbGet<JebySimple.CacheEntry>('cache', key)
         if (e && now() - e.data.fetchedAt < e.ttl && e.data.raw) {
           cache.set(key, e)
-          return forecastToSimple(e.data.raw)
+          return forecastToSimple(e.data.raw, e.data.airQualityRaw)
         }
       } catch { /* ignore */ }
     }
 
+    // فچ جدید
     try {
       const w = await getWeatherForCity(city, opts)
-      if (w.raw) return forecastToSimple(w.raw)
+      if (w.raw) return forecastToSimple(w.raw, w.airQualityRaw)
       return null
     } catch {
       return null
     }
   }
 
-  /* ===== Timezone Helpers ===== */
-
+  /* ===== Timezone Helpers (No Change) ===== */
   function findCurrentHourIndexWithTimezone(forecast: JebySimple.SimpleForecast, timeZone?: string): number {
+    // ... (بدون تغییر)
     if (!forecast.hourly || forecast.hourly.length === 0) return -1
 
     const now = new Date()
@@ -544,6 +587,7 @@ export const useWeatherStore = defineStore('weather', () => {
   }
 
   async function getCurrentWeatherWithTimezone(city: JebySimple.City) {
+    // ... (بدون تغییر)
     const simple = await getSimpleForecastForCity(city)
     if (!simple) return null
 
@@ -560,6 +604,7 @@ export const useWeatherStore = defineStore('weather', () => {
     }
   }
 
+  // ... (بقیه توابع مثل fetchWeatherForCities و Favorites مثل قبل)
   async function fetchWeatherForCities(cities: JebySimple.City[], opts?: { force?: boolean; ttl?: number }) {
     const result: Record<string, JebySimple.WeatherData | null> = {}
     await Promise.all(
@@ -573,6 +618,7 @@ export const useWeatherStore = defineStore('weather', () => {
     )
     return result
   }
+
 
   /* ===== Favorites (persisted) ===== */
 
@@ -640,33 +686,26 @@ export const useWeatherStore = defineStore('weather', () => {
   }
 
   /* ===== Return public API ===== */
-
+  // ... (Return همان قبلی است)
   return {
-    // state
     searchResults,
     loadingSearch,
     searchError,
     favorites,
-    // getters
     isFavorite,
-    // actions
     searchCities,
     getWeatherForCity,
     getSimpleForecastForCity,
     fetchWeatherForCities,
-    // favorites
     addFavorite,
     removeFavorite,
     toggleFavorite,
     reorderFavorites,
-    // cache
     removeFromCache,
     clearCache,
     getCachedWeatherFromDB,
     cacheSnapshot,
-    // admin
     loadFromIndexedDB,
-    // helpers (exposed for UI convenience)
     forecastToSimple,
     getHourlyValueFromSimple,
     temperatureAt,
