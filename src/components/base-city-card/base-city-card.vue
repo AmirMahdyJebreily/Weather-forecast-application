@@ -125,7 +125,7 @@ function leave(el: Element, done: () => void) {
       <Suspense suspensible>
         <Transition
           name="city-change"
-          mode="out-in"
+          mode="default"
           @before-enter="beforeEnter"
           @enter="enter"
           @before-leave="beforeLeave"

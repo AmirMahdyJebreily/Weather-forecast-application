@@ -165,7 +165,7 @@ async function startEventLeastener() {
   >
     <div
       v-if="cityToFavorites.length > 0"
-      class="flex items-stretch justify-center w-full gap-3 pt-1"
+      class="flex items-stretch justify-center w-full gap-3 pt-1 p-4 pb-6"
     >
       <button
         @click="() => router.push({ path: '/' })"
