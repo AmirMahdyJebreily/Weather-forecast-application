@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { SettlementLevel, useWeatherStore, type City } from '@/stores/weather'
+import { useWeatherStore } from '@/stores/weather'
 import { GlobeAsiaAustraliaIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 import { computed, nextTick, ref, toRaw } from 'vue'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
 import { useRouter } from 'vue-router'
+import { type City, SettlementLevel } from '@/stores/models/simple-city-models'
 
 const loading = ref<boolean>(false)
 

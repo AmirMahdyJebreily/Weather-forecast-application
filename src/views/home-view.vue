@@ -2,7 +2,6 @@
 import { computed, useTemplateRef, ref, watch, nextTick } from 'vue'
 import { useWeatherStore } from '@/stores/weather'
 import BaseCityCard from '@/components/base-city-card/base-city-card.vue'
-import type { City } from '@/stores/weather'
 import BaseModal from '@/components/base-modal.vue'
 import DaySelector from '@/components/day-selector.vue'
 import { useUiStore } from '@/stores/ui'
@@ -10,6 +9,7 @@ import { InformationCircleIcon, MapPinIcon, TrashIcon } from '@heroicons/vue/24/
 import { PlusIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/solid'
 import { useScrollShrink } from '@/composables/useScrollShrink'
 import { views } from '@/router'
+import type { City } from '@/stores/models/simple-city-models'
 
 const store = useWeatherStore()
 const ui = useUiStore()
@@ -46,8 +46,8 @@ const headerStyle = computed(() => ({
 const modalVisible = ref(false)
 const modalCity = ref<City | null>(null)
 const expandedCityId = ref<string | null>(null) // stored as `${selectedDayIndex}:${cityId}`
-const NOW_ONLY: string[] = ['now-status']
-const NOW_AND_HOURLY: string[] = ['now-status', 'hourly-status']
+const NOW_ONLY: string[] = ['now-status', 'expand-status']
+const NOW_AND_HOURLY: string[] = ['now-status', 'hourly-status', 'quality-status']
 
 function requestDelete(city: City) {
   modalCity.value = city
