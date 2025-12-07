@@ -6,7 +6,7 @@ const route = useRoute()
 </script>
 
 <template>
-  <main dir="rtl" class="app-container">
+  <main dir="rtl" class="app-container" @contextmenu.prevent>
     <section v-if="route.name != 'home'" class="app-bar">
       <BackButton />
       <h1 class="text-slate-500 font-semibold text-lg w-full text-center">

@@ -89,4 +89,14 @@
     transition: scrollbar-color 1s ease;
     touch-action: pan-y;
   }
+
+  * {
+    @apply !select-none;
+  }
+
+  img {
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none; /* اگر نمی‌خوای روی عکس کلیک هم بشه */
+  }
 }
