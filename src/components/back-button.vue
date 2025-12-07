@@ -1,29 +1,26 @@
 <script setup lang="ts">
 import { ArrowRightIcon } from '@heroicons/vue/24/outline'
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const canGoBack = ref(false)
 
-function updateCanGoBack() {
+async function updateCanGoBack() {
+  await nextTick()
   const pos = window.history.state?.position ?? 0
   canGoBack.value = pos > 0
 }
 
 let removeAfterEach: (() => void) | null = null
-let popListener: ((e: PopStateEvent) => void) | null = null
 
 onMounted(() => {
   updateCanGoBack()
   removeAfterEach = router.afterEach(updateCanGoBack)
-  popListener = () => updateCanGoBack()
-  window.addEventListener('popstate', popListener)
 })
 
 onBeforeUnmount(() => {
   if (removeAfterEach) removeAfterEach()
-  if (popListener) window.removeEventListener('popstate', popListener)
 })
 
 function handleClick() {
