@@ -13,7 +13,7 @@ app.use(router)
 app.mount('#app')
 
 
-if ((window as any).Eitaa?.WebApp) {
+if (window.Eitaa?.WebApp) {
   const handleBack = () => {
     router.back()
   }
@@ -33,7 +33,7 @@ if ((window as any).Eitaa?.WebApp) {
   webapp.BackButton.onClick(handleBack)
 
 
-  webapp.onEvent('viewportChanged', (params) => {
+  webapp.onEvent('viewportChanged', () => {
     if (!webapp.isExpanded) {
       webapp.expand()
     }
