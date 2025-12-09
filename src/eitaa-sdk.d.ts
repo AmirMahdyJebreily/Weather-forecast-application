@@ -1,10 +1,14 @@
-interface Window {
-  Eitaa?: {
-    WebApp: EitaaWebApp
+// src/types/eitaa-webapp.d.ts
+
+declare global {
+  interface Window {
+    Eitaa?: {
+      WebApp: EitaaWebApp
+    }
   }
 }
 
-interface EitaaWebApp {
+export interface EitaaWebApp {
   // Properties
   initData: string
   initDataUnsafe: WebAppInitData
@@ -36,7 +40,7 @@ interface EitaaWebApp {
   DeviceOrientation: DeviceOrientation
   Gyroscope: Gyroscope
 
-  // Methods
+  // Methods با type-safe overloads
   isVersionAtLeast(version: string): boolean
   setHeaderColor(color: string): void
   setBackgroundColor(color: string): void
@@ -45,8 +49,26 @@ interface EitaaWebApp {
   disableClosingConfirmation(): void
   enableVerticalSwipes(): void
   disableVerticalSwipes(): void
-  onEvent(eventType: EitaaEventType, eventHandler: (params?: any) => void): void
-  offEvent(eventType: EitaaEventType, eventHandler: (params?: any) => void): void
+
+  // Event handlers با overload برای type safety
+  onEvent(eventType: 'viewportChanged', eventHandler: (params: ViewportChangedEventData) => void): void
+  onEvent(eventType: 'popupClosed', eventHandler: (params: PopupClosedEventData) => void): void
+  onEvent(eventType: 'qrTextReceived', eventHandler: (params: QrTextReceivedEventData) => void): void
+  onEvent(eventType: 'writeAccessRequested', eventHandler: (params: WriteAccessRequestedEventData) => void): void
+  onEvent(eventType: 'contactRequested', eventHandler: (params: ContactRequestedEventData) => void): void
+  onEvent(eventType: 'fullscreenFailed', eventHandler: (params: FullscreenFailedEventData) => void): void
+  onEvent(eventType: 'homeScreenChecked', eventHandler: (params: HomeScreenCheckedEventData) => void): void
+  onEvent(eventType: 'themeChanged' | 'activated' | 'deactivated' | 'safeAreaChanged' | 'contentSafeAreaChanged' | 'mainButtonClicked' | 'backButtonClicked' | 'settingsButtonClicked' | 'scanQrPopupClosed' | 'fullscreenChanged' | 'homeScreenAdded', eventHandler: () => void): void
+
+  offEvent(eventType: 'viewportChanged', eventHandler: (params: ViewportChangedEventData) => void): void
+  offEvent(eventType: 'popupClosed', eventHandler: (params: PopupClosedEventData) => void): void
+  offEvent(eventType: 'qrTextReceived', eventHandler: (params: QrTextReceivedEventData) => void): void
+  offEvent(eventType: 'writeAccessRequested', eventHandler: (params: WriteAccessRequestedEventData) => void): void
+  offEvent(eventType: 'contactRequested', eventHandler: (params: ContactRequestedEventData) => void): void
+  offEvent(eventType: 'fullscreenFailed', eventHandler: (params: FullscreenFailedEventData) => void): void
+  offEvent(eventType: 'homeScreenChecked', eventHandler: (params: HomeScreenCheckedEventData) => void): void
+  offEvent(eventType: 'themeChanged' | 'activated' | 'deactivated' | 'safeAreaChanged' | 'contentSafeAreaChanged' | 'mainButtonClicked' | 'backButtonClicked' | 'settingsButtonClicked' | 'scanQrPopupClosed' | 'fullscreenChanged' | 'homeScreenAdded', eventHandler: () => void): void
+
   openLink(url: string, options?: OpenLinkOptions): void
   openEitaaLink(url: string): void
   showPopup(params: PopupParams, callback?: (buttonId: string | null) => void): void
@@ -68,224 +90,32 @@ interface EitaaWebApp {
   downloadFile(params: DownloadFileParams): void
 }
 
-interface ThemeParams {
-  bg_color?: string
-  text_color?: string
-  hint_color?: string
-  link_color?: string
-  button_color?: string
-  button_text_color?: string
-  secondary_bg_color?: string
-  header_bg_color?: string
-  accent_text_color?: string
-  section_bg_color?: string
-  section_header_text_color?: string
-  section_separator_color?: string
-  subtitle_text_color?: string
-  destructive_text_color?: string
-  bottom_bar_bg_color?: string
-}
+// ... بقیه interfaceها
 
-interface WebAppInitData {
-  query_id?: string
-  user?: WebAppUser
-  chat_type?: 'private' | 'group' | 'channelOrSupergroup'
-  chat_instance?: string
-  start_param?: string
-  auth_date: number
-  device_id: string
-  hash: string
-}
-
-interface WebAppUser {
-  id: number
-  first_name: string
-  last_name?: string
-  language_code?: string
-  allows_write_to_pm?: true
-}
-
-interface PopupParams {
-  title?: string
-  message: string
-  buttons?: PopupButton[]
-}
-
-interface PopupButton {
-  id?: string
-  type?: 'default' | 'ok' | 'close' | 'cancel' | 'destructive'
-  text?: string
-}
-
-interface ScanQrPopupParams {
-  text?: string
-}
-
-interface OpenLinkOptions {
-  try_instant_view?: boolean
-  try_browser?: boolean
-}
-
-interface DownloadFileParams {
-  url: string
-  file_name: string
-}
-
-interface BackButton {
-  isVisible: boolean
-  onClick(callback: () => void): void
-  offClick(callback: () => void): void
-  show(): void
-  hide(): void
-}
-
-interface BottomButton {
-  type: 'main' | 'secondary'
-  text: string
-  color: string
-  textColor: string
-  isVisible: boolean
-  isActive: boolean
-  hasShineEffect: boolean
-  position: 'left' | 'right' | 'top' | 'bottom'
-  isProgressVisible: boolean
-  setText(text: string): void
-  onClick(callback: () => void): void
-  offClick(callback: () => void): void
-  show(): void
-  hide(): void
-  enable(): void
-  disable(): void
-  showProgress(leaveActive?: boolean): void
-  hideProgress(): void
-  setParams(params: BottomButtonParams): void
-}
-
-interface BottomButtonParams {
-  text?: string
-  color?: string
-  text_color?: string
-  is_active?: boolean
-  is_visible?: boolean
-  position?: 'left' | 'right' | 'top' | 'bottom'
-  has_shine_effect?: boolean
-}
-
-interface SettingsButton {
-  isVisible: boolean
-  onClick(callback: () => void): void
-  offClick(callback: () => void): void
-  show(): void
-  hide(): void
-}
-
-interface HapticFeedback {
-  impactOccurred(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'): void
-  notificationOccurred(type: 'error' | 'success' | 'warning'): void
-  selectionChanged(): void
-}
-
-interface SafeAreaInset {
-  top: number
-  bottom: number
-  left: number
-  right: number
-}
-
-interface ContentSafeAreaInset {
-  top: number
-  bottom: number
-  left: number
-  right: number
-}
-
-interface Accelerometer {
-  isStarted: boolean
-  x: number
-  y: number
-  z: number
-  start(params?: AccelerometerStartParams, callback?: (started: boolean) => void): void
-  stop(callback?: (stopped: boolean) => void): void
-}
-
-interface AccelerometerStartParams {
-  refresh_rate?: number
-}
-
-interface DeviceOrientation {
-  isStarted: boolean
-  absolute: boolean
-  alpha: number
-  beta: number
-  gamma: number
-  start(params?: DeviceOrientationStartParams, callback?: (started: boolean) => void): void
-  stop(callback?: (stopped: boolean) => void): void
-}
-
-interface DeviceOrientationStartParams {
-  refresh_rate?: number
-  need_absolute?: boolean
-}
-
-interface Gyroscope {
-  isStarted: boolean
-  x: number
-  y: number
-  z: number
-  start(params?: GyroscopeStartParams, callback?: (started: boolean) => void): void
-  stop(callback?: (stopped: boolean) => void): void
-}
-
-interface GyroscopeStartParams {
-  refresh_rate?: number
-}
-
-type HomeScreenStatus = 'unsupported' | 'unknown' | 'added' | 'missed'
-
-type EitaaEventType =
-  | 'themeChanged'
-  | 'viewportChanged'
-  | 'activated'
-  | 'deactivated'
-  | 'safeAreaChanged'
-  | 'contentSafeAreaChanged'
-  | 'mainButtonClicked'
-  | 'backButtonClicked'
-  | 'settingsButtonClicked'
-  | 'popupClosed'
-  | 'qrTextReceived'
-  | 'scanQrPopupClosed'
-  | 'writeAccessRequested'
-  | 'contactRequested'
-  | 'fullscreenChanged'
-  | 'fullscreenFailed'
-  | 'homeScreenAdded'
-  | 'homeScreenChecked'
-
-interface ViewportChangedEventData {
+export interface ViewportChangedEventData {
   isStateStable: boolean
 }
 
-interface PopupClosedEventData {
+export interface PopupClosedEventData {
   button_id: string | null
 }
 
-interface QrTextReceivedEventData {
+export interface QrTextReceivedEventData {
   data: string
 }
 
-interface WriteAccessRequestedEventData {
+export interface WriteAccessRequestedEventData {
   status: 'allowed' | 'cancelled'
 }
 
-interface ContactRequestedEventData {
+export interface ContactRequestedEventData {
   status: 'sent' | 'cancelled'
 }
 
-interface FullscreenFailedEventData {
+export interface FullscreenFailedEventData {
   error: string
 }
 
-interface HomeScreenCheckedEventData {
+export interface HomeScreenCheckedEventData {
   status: HomeScreenStatus
 }
