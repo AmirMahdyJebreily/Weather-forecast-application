@@ -27,14 +27,17 @@ if ((window as any).Eitaa?.WebApp) {
   webapp.expand()
 
   // گوش دادن به تغییرات viewport و دوباره expand کردن
+
+
+  webapp.BackButton.show()
+  webapp.BackButton.onClick(handleBack)
+
+
   webapp.onEvent('viewportChanged', (params) => {
     if (!webapp.isExpanded) {
       webapp.expand()
     }
   })
-
-  webapp.Eitaa.WebApp.BackButton.show()
-  webapp.Eitaa.WebApp.BackButton.onClick(handleBack)
 
   history.pushState({ page: 'current' }, '', '')
   window.addEventListener('popstate', () => {
