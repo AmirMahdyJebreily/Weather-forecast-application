@@ -22,12 +22,19 @@ router.isReady().then(() => {
 
   const webapp = getEitaaWebApp()!;
 
+  // تنظیمات اولیه
   webapp.disableVerticalSwipes();
   webapp.expand();
   webapp.ready();
 
-  const { setupBackButton, updateBackButton } = useEitaaWebApp();
+  // Handle viewport changes
+  webapp.onEvent('viewportChanged', (event) => {
+    if (!webapp.isExpanded && event.isStateStable) {
+      webapp.expand();
+    }
+  });
 
+  // Setup BackButton با event listener
+  const { setupBackButton } = useEitaaWebApp();
   setupBackButton();
-  updateBackButton();
 });

@@ -1,5 +1,5 @@
 // src/composables/useEitaaWebApp.ts
-import { onMounted, onUnmounted } from 'vue';
+import { onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getEitaaWebApp, isEitaaWebAppAvailable } from '@/eitaa-sdk';
 
@@ -12,41 +12,43 @@ export function useEitaaWebApp() {
       isAvailable: false as const,
       setupBackButton: () => { },
       updateBackButton: () => { },
+      cleanup: () => { },
     };
   }
 
   const webapp = getEitaaWebApp()!;
   let unregisterAfterEach: (() => void) | null = null;
+  let isSetup = false;
 
   /**
-   * تشخیص اینکه واقعا می‌شه برگشت یا نه
-   * Vue Router به طور پیش‌فرض position رو در history.state نگه می‌داره [web:26].
+   * تشخیص اینکه واقعاً می‌شه برگشت یا نه
    */
   const canGoBack = (): boolean => {
     const state = window.history.state as
       | { back: string | null; position: number }
       | null;
 
-    // اگر state در دسترس نیست، فرض می‌کنیم اولین صفحه است
     if (!state) return false;
-
-    // اگر back = null باشه یعنی این اولین entry history برای SPA است [web:26]
     if (state.back === null) return false;
-
-    // position === 0 هم یعنی اولین entry
     if (state.position === 0) return false;
 
     return true;
   };
 
   const updateBackButton = () => {
-    if (canGoBack()) {
+    const shouldShow = canGoBack();
+
+    if (shouldShow) {
       if (!webapp.BackButton.isVisible) {
         webapp.BackButton.show();
+        console.log("Back button show");
+
       }
     } else {
       if (webapp.BackButton.isVisible) {
         webapp.BackButton.hide();
+        console.log("Back button hide");
+
       }
     }
   };
@@ -55,17 +57,32 @@ export function useEitaaWebApp() {
     if (canGoBack()) {
       router.back();
     } else {
-      // اگر دیگه route قبلی نداریم، به‌جای خراب کردن history، mini-app رو ببند
       webapp.close();
     }
   };
 
+  /**
+   * Handler برای popstate event
+   * هر بار که history state تغییر می‌کنه (حتی خارج از Vue Router) صدا زده میشه
+   */
+  const handlePopState = () => {
+    // کمی تاخیر بده تا state کامل update بشه
+    requestAnimationFrame(() => {
+      updateBackButton();
+    });
+  };
+
   const setupBackButton = () => {
-    // دوباره ثبت نکن اگر قبلاً set شده
+    if (isSetup) {
+      console.warn('BackButton already setup. Call cleanup() first.');
+      return;
+    }
+
+    // ثبت handler دکمه back
     webapp.BackButton.offClick(handleBack);
     webapp.BackButton.onClick(handleBack);
 
-    // بعد از هر navigation، وضعیت back button را sync کن
+    // ثبت Vue Router guard
     if (unregisterAfterEach) {
       unregisterAfterEach();
     }
@@ -73,22 +90,32 @@ export function useEitaaWebApp() {
       updateBackButton();
     });
 
-    // روی mount اولیه هم sync
+    // ثبت popstate listener برای catch کردن تمام تغییرات history
+    window.addEventListener('popstate', handlePopState);
+
+    isSetup = true;
+
+    // Initial update
     updateBackButton();
   };
 
-  // اگر این composable داخل یک component استفاده می‌شود
-  onMounted(() => {
-    // در صورت نیاز می‌توانی تنظیمات عمومی اینجا انجام بدهی
-    // مثل webapp.disableVerticalSwipes(), webapp.expand(), webapp.ready()
-  });
+  const cleanup = () => {
+    if (!isSetup) return;
 
-  onUnmounted(() => {
     webapp.BackButton.offClick(handleBack);
+
     if (unregisterAfterEach) {
       unregisterAfterEach();
       unregisterAfterEach = null;
     }
+
+    window.removeEventListener('popstate', handlePopState);
+
+    isSetup = false;
+  };
+
+  onUnmounted(() => {
+    cleanup();
   });
 
   return {
@@ -96,5 +123,6 @@ export function useEitaaWebApp() {
     isAvailable: true as const,
     setupBackButton,
     updateBackButton,
+    cleanup,
   };
 }
