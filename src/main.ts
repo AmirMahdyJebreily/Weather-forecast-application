@@ -1,47 +1,53 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import '../public/main.css'
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import '../public/main.css';
 
-import App from './App.vue'
-import router from './router'
+import App from './App.vue';
+import router from './router';
+import { isEitaaWebAppAvailable, getEitaaWebApp } from './eitaa-sdk';
 
-const app = createApp(App)
+const app = createApp(App);
 
-app.use(createPinia())
-app.use(router)
+app.use(createPinia());
+app.use(router);
 
-app.mount('#app')
+// Eitaa WebApp global setup
+if (isEitaaWebAppAvailable()) {
+  const webapp = getEitaaWebApp()!;
 
+  webapp.disableVerticalSwipes();
+  webapp.expand();
+  webapp.ready();
 
-if (window.Eitaa?.WebApp) {
-  const handleBack = () => {
-    router.back()
-  }
-
-  const webapp = window.Eitaa.WebApp
-
-  // غیرفعال کردن swipe عمودی برای بستن
-  webapp.disableVerticalSwipes()
-
-  // expand کردن برنامه
-  webapp.expand()
-
-  // گوش دادن به تغییرات viewport و دوباره expand کردن
-
-
-  webapp.BackButton.show()
-  webapp.BackButton.onClick(handleBack)
-
-
-  webapp.onEvent('viewportChanged', () => {
-    if (!webapp.isExpanded) {
-      webapp.expand()
+  webapp.onEvent('viewportChanged', (event) => {
+    if (!webapp.isExpanded && event.isStateStable) {
+      webapp.expand();
     }
-  })
+  });
 
-  history.pushState({ page: 'current' }, '', '')
-  window.addEventListener('popstate', () => {
-    handleBack()
-    history.pushState({ page: 'current' }, '', '')
-  })
+  // Back button management
+  const updateBackButton = () => {
+    const canGoBack = window.history.state?.position > 0;
+    if (canGoBack) {
+      webapp.BackButton.show();
+    } else {
+      webapp.BackButton.hide();
+    }
+  };
+
+  const handleBack = () => {
+    if (window.history.state?.position > 0) {
+      router.back();
+    } else {
+      webapp.close();
+    }
+  };
+
+  webapp.BackButton.onClick(handleBack);
+  router.afterEach(() => updateBackButton());
+
+  // Initial check after router is ready
+  router.isReady().then(() => updateBackButton());
 }
+
+app.mount('#app');
