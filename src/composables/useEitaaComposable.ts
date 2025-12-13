@@ -1,128 +1,72 @@
-// src/composables/useEitaaWebApp.ts
-import { onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { getEitaaWebApp, isEitaaWebAppAvailable } from '@/eitaa-sdk';
+// composables/useEitaaBackButton.ts
+import { watch, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getEitaaWebApp } from '@/eitaa-sdk'
 
-export function useEitaaWebApp() {
-  const router = useRouter();
+interface UseEitaaBackButtonOptions {
+  homeRoute?: string // مثلاً '/' یا '/home'
+  alwaysShow?: boolean // برای صفحاتی که همیشه باید back داشته باشن
+}
 
-  if (!isEitaaWebAppAvailable()) {
-    return {
-      webapp: null as null,
-      isAvailable: false as const,
-      setupBackButton: () => { },
-      updateBackButton: () => { },
-      cleanup: () => { },
-    };
+export function useEitaaBackButton(options: UseEitaaBackButtonOptions = {}) {
+  const router = useRouter()
+  const webapp = getEitaaWebApp()
+
+  if (!webapp) return
+
+  const { homeRoute = '/', alwaysShow = false } = options
+  const backButton = webapp.BackButton
+
+  const canGoBack = () => {
+    const currentPath = router.currentRoute.value.path
+
+    // اگر روی صفحه اول هستیم
+    if (currentPath === homeRoute && !alwaysShow) {
+      return false
+    }
+
+    // چک history
+    return window.history.length > 1
   }
 
-  const webapp = getEitaaWebApp()!;
-  let unregisterAfterEach: (() => void) | null = null;
-  let isSetup = false;
-
-  /**
-   * تشخیص اینکه واقعاً می‌شه برگشت یا نه
-   */
-  const canGoBack = (): boolean => {
-    const state = window.history.state as
-      | { back: string | null; position: number }
-      | null;
-
-    if (!state) return false;
-    if (state.back === null) return false;
-    if (state.position === 0) return false;
-
-    return true;
-  };
-
-  const updateBackButton = () => {
-    const shouldShow = canGoBack();
-
-    if (shouldShow) {
-      if (!webapp.BackButton.isVisible) {
-        webapp.BackButton.show();
-        console.log("Back button show");
-
-      }
-    } else {
-      if (webapp.BackButton.isVisible) {
-        webapp.BackButton.hide();
-        console.log("Back button hide");
-
-      }
-    }
-  };
-
-  const handleBack = () => {
+  const updateBackButtonVisibility = () => {
     if (canGoBack()) {
-      router.back();
+      backButton.show()
+      console.log("backbutton is showing");
+
     } else {
-      webapp.close();
+      backButton.hide()
+      console.log("backbutton is hiding");
+
     }
-  };
+  }
 
-  /**
-   * Handler برای popstate event
-   * هر بار که history state تغییر می‌کنه (حتی خارج از Vue Router) صدا زده میشه
-   */
-  const handlePopState = () => {
-    // کمی تاخیر بده تا state کامل update بشه
-    requestAnimationFrame(() => {
-      updateBackButton();
-    });
-  };
-
-  const setupBackButton = () => {
-    if (isSetup) {
-      console.warn('BackButton already setup. Call cleanup() first.');
-      return;
+  const handleBackClick = () => {
+    if (canGoBack()) {
+      router.back()
     }
+  }
 
-    // ثبت handler دکمه back
-    webapp.BackButton.offClick(handleBack);
-    webapp.BackButton.onClick(handleBack);
+  onMounted(() => {
+    updateBackButtonVisibility()
+    backButton.onClick(handleBackClick)
 
-    // ثبت Vue Router guard
-    if (unregisterAfterEach) {
-      unregisterAfterEach();
-    }
-    unregisterAfterEach = router.afterEach(() => {
-      updateBackButton();
-    });
+    // watch route changes
+    const unwatch = watch(
+      () => router.currentRoute.value,
+      () => {
+        // کمی تاخیر برای اطمینان از اینکه navigation کامل شده
+        setTimeout(updateBackButtonVisibility, 50)
+      },
+      { immediate: false }
+    )
 
-    // ثبت popstate listener برای catch کردن تمام تغییرات history
-    window.addEventListener('popstate', handlePopState);
+    onUnmounted(() => {
+      backButton.offClick(handleBackClick)
+      backButton.hide()
+      unwatch()
+    })
+  })
 
-    isSetup = true;
-
-    // Initial update
-    updateBackButton();
-  };
-
-  const cleanup = () => {
-    if (!isSetup) return;
-
-    webapp.BackButton.offClick(handleBack);
-
-    if (unregisterAfterEach) {
-      unregisterAfterEach();
-      unregisterAfterEach = null;
-    }
-
-    window.removeEventListener('popstate', handlePopState);
-
-    isSetup = false;
-  };
-
-  onUnmounted(() => {
-    cleanup();
-  });
-
-  return {
-    webapp,
-    isAvailable: true as const,
-    setupBackButton,
-    updateBackButton,
-    cleanup,
-  };
+  return { backButton }
 }

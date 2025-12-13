@@ -6,7 +6,6 @@ import router from './router';
 import '../public/main.css';
 
 import { isEitaaWebAppAvailable, getEitaaWebApp } from '@/eitaa-sdk';
-import { useEitaaWebApp } from './composables/useEitaaComposable';
 
 const app = createApp(App);
 
@@ -34,7 +33,5 @@ router.isReady().then(() => {
     }
   });
 
-  // Setup BackButton با event listener
-  const { setupBackButton } = useEitaaWebApp();
-  setupBackButton();
+
 });
