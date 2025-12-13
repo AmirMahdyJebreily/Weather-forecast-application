@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import BackButton from './components/back-button.vue'
+import { useEitaaBackButton } from './composables/useEitaaComposable'
 
 const route = useRoute()
+
+// فعال‌سازی دکمه بک ایتا
+useEitaaBackButton({
+  homeRoute: '/home', // یا '/' بسته به route اصلی‌تون
+  alwaysShow: false,
+})
 </script>
 
 <template>
@@ -24,10 +31,6 @@ const route = useRoute()
         </div>
       </transition>
     </router-view>
-
-    <!-- <footer class="text-slate-500 text-sm flex items-end justify-center">
-      &copy; صنایع خلاق نسیم مهر 1404
-    </footer> -->
   </main>
 </template>
 
