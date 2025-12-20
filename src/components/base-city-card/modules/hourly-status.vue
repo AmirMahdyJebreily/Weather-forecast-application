@@ -21,11 +21,11 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const currentVisibleIdx = ref<number | null>(null)
 const containerRef = ref<HTMLElement | null>(null)
+const currentCityTimeIso = ref('')
 
 const store = useWeatherStore()
 const ui = useUiStore()
 
-// Helper: استخراج ساعت (عدد 0 تا 23) از رشته ایزو "YYYY-MM-DDTHH:00"
 function getHourFromIso(isoTime: string): number {
   if (!isoTime) return 0
   const parts = isoTime.split('T')
@@ -33,35 +33,20 @@ function getHourFromIso(isoTime: string): number {
   return parseInt(parts[1]!.substring(0, 2), 10)
 }
 
-// Helper: استخراج تاریخ "YYYY-MM-DD" از رشته ایزو
-function getDateStrFromIso(isoTime: string): string {
-  if (!isoTime) return ''
-  return isoTime.split('T')[0]!
-}
-
 function formatHourDisplay(isoTime: string) {
-  // فقط ساعت را از رشته برمی‌داریم. چون رشته محلی است، نیازی به Intl نیست.
   const h = getHourFromIso(isoTime)
   return `${h}:00`
 }
 
-/**
- * محاسبه تاریخِ هدف بر اساس selectedDayIndex
- * selectedDayIndex=0 یعنی امروز، 1 یعنی فردا و ...
- */
 function getTargetDateString(timezone: string, dayIndex: number): string {
   const now = new Date()
-  // اضافه کردن روزها به زمان حال
   now.setDate(now.getDate() + dayIndex)
-
-  // فرمت کردن به YYYY-MM-DD در تایم‌زون مقصد
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).formatToParts(now)
-
   const p: Record<string, string> = {}
   parts.forEach(({ type, value }) => {
     p[type] = value
@@ -69,9 +54,6 @@ function getTargetDateString(timezone: string, dayIndex: number): string {
   return `${p.year}-${p.month}-${p.day}`
 }
 
-/**
- * پیدا کردن "همین الان" به وقت شهر مقصد به فرمت YYYY-MM-DDTHH:00
- */
 function getCurrentCityTimeIso(timezone: string): string {
   const now = new Date()
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -82,96 +64,83 @@ function getCurrentCityTimeIso(timezone: string): string {
     hour: '2-digit',
     hour12: false,
   }).formatToParts(now)
-
   const p: Record<string, string> = {}
   parts.forEach(({ type, value }) => {
     p[type] = value
   })
-
   const h = p.hour === '24' ? '00' : p.hour
   return `${p.year}-${p.month}-${p.day}T${h}:00`
 }
 
 async function loadHours() {
-  debugger
   loading.value = true
   error.value = null
+
   try {
     const simple = await store.getSimpleForecastForCity(props.city)
-    if (!simple || !simple.hourly || simple.hourly.length === 0) {
-      error.value = 'دادهٔ ساعتی در دسترس نیست'
-      hours.value = []
+
+    if (!simple?.hourly?.length) {
+      handleError('دادهٔ ساعتی در دسترس نیست')
       return
     }
 
-    // 1. پیدا کردن تاریخِ روز انتخابی (امروز/فردا/...) به وقت شهر مقصد
-    const targetDateStr = getTargetDateString(props.city.timezone ?? 'UTC', ui.selectedDayIndex)
+    const timezone = props.city.timezone ?? 'UTC'
+    const targetDateStr = getTargetDateString(timezone, ui.selectedDayIndex)
 
-    // 2. فیلتر کردن نقاطی که تاریخشان با تاریخ هدف یکی است
-    // نکته: p.time در Open-Meteo همیشه لوکال است، پس مستقیم مقایسه می‌کنیم.
-    const filtered = simple.hourly.filter((p) => {
-      const pDateStr = getDateStrFromIso(p.time)
-      console.log(pDateStr, targetDateStr)
+    const dayHours = simple.hourly.filter((p) => p.time.startsWith(targetDateStr))
 
-      return pDateStr === targetDateStr
-    })
-
-    if (filtered.length === 0) {
-      // اگر برای روزهای آینده دیتا نداشتیم (مثلاً forecast_days=1 بود ولی ui.selectedDayIndex=2 بود)
-      if (ui.selectedDayIndex > 0) {
-        error.value = 'داده برای این روز موجود نیست'
-      } else {
-        error.value = 'دادهٔ ساعتی یافت نشد'
-      }
-      hours.value = []
-      currentVisibleIdx.value = null
-    } else {
-      // 3. مرتب‌سازی یا چرخش لیست
-      // اگر روز "امروز" (selectedDayIndex === 0) باشد، می‌خواهیم از ساعت فعلی شروع شود.
-      // اگر روزهای آینده باشد، از ساعت 00:00 شروع شود (که پیش‌فرض مرتب است).
-
-      if (ui.selectedDayIndex === 0) {
-        const currentCityIso = getCurrentCityTimeIso(props.city.timezone ?? 'UTC')
-
-        // پیدا کردن اندیس ساعت فعلی در لیست فیلتر شده
-        const exactIdx = filtered.findIndex((p) => p.time === currentCityIso)
-
-        if (exactIdx >= 0) {
-          // چرخش: ساعت فعلی بیاید اول لیست
-          // برش از فعلی تا آخر + برش از اول تا قبل از فعلی
-          hours.value = filtered.slice(exactIdx).concat(filtered.slice(0, exactIdx))
-          currentVisibleIdx.value = 0 // کارت اول، هایلایت شود
-        } else {
-          // اگر ساعت دقیق پیدا نشد (مثلاً ساعت فعلی از لیست رد شده یا هنوز نرسیده)،
-          // نزدیک‌ترین ساعت آینده را پیدا می‌کنیم
-          const currentHour = getHourFromIso(currentCityIso)
-          const nextIdx = filtered.findIndex((p) => getHourFromIso(p.time) > currentHour)
-
-          if (nextIdx >= 0) {
-            hours.value = filtered.slice(nextIdx).concat(filtered.slice(0, nextIdx))
-            currentVisibleIdx.value = 0
-          } else {
-            // اگر همه ساعات گذشته‌اند (آخر شب)، همان لیست را نشان بده
-            hours.value = filtered
-            currentVisibleIdx.value = null
-          }
-        }
-      } else {
-        // برای روزهای دیگر، ترتیب معمولی (۰۰:۰۰ تا ۲۳:۰۰)
-        hours.value = filtered
-        currentVisibleIdx.value = null // هیچ کارتی به عنوان "الان" هایلایت نشود
-      }
+    if (dayHours.length === 0) {
+      handleError(ui.selectedDayIndex > 0 ? 'داده برای این روز موجود نیست' : 'داده یافت نشد')
+      return
     }
+
+    hours.value = dayHours
+
+    if (ui.selectedDayIndex === 0) {
+      currentCityTimeIso.value = getCurrentCityTimeIso(timezone)
+      const currentHourIso = currentCityTimeIso.value.substring(0, 13)
+      const nowIdx = dayHours.findIndex((p) => p.time.startsWith(currentHourIso))
+      currentVisibleIdx.value = nowIdx >= 0 ? nowIdx : null
+    } else {
+      currentCityTimeIso.value = ''
+      currentVisibleIdx.value = null
+    }
+
+    await scrollToCurrentTime()
   } catch (e) {
     console.error(e)
-    error.value = 'خطا در پردازش داده‌ها'
-    hours.value = []
+    handleError('خطا در پردازش داده‌ها')
   } finally {
     loading.value = false
   }
 }
 
-// Watch for prop/store changes to reload
+async function scrollToCurrentTime() {
+  await nextTick()
+  if (!containerRef.value) return
+
+  if (currentVisibleIdx.value === null) {
+    containerRef.value.scrollTo({ left: 0, behavior: 'smooth' })
+    return
+  }
+
+  const activeEl = containerRef.value.querySelector('#active-hour-card')
+  if (activeEl) {
+    activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }
+}
+
+function handleError(msg: string) {
+  error.value = msg
+  hours.value = []
+  currentVisibleIdx.value = null
+}
+
+const isTimePast = (targetIso: string, referenceIso: string): boolean => {
+  if (!referenceIso) return false
+  return targetIso < referenceIso
+}
+
 watch(
   () => [props.city, ui.selectedDayIndex],
   async () => {
@@ -179,14 +148,10 @@ watch(
   },
 )
 
-// load for the initial mount
 await loadHours()
 
 onMounted(async () => {
-  await nextTick()
-  await new Promise((r) => setTimeout(r, 30))
-  if (!containerRef.value) return
-  containerRef.value.scrollTo({ left: 0, behavior: 'smooth' })
+  await scrollToCurrentTime()
 })
 </script>
 
@@ -211,19 +176,29 @@ onMounted(async () => {
     </template>
 
     <template v-else>
-      <div ref="containerRef" class="overflow-x-auto -mx-1 py-2 dir-ltr-scroll">
-        <TransitionGroup name="hour-fade" tag="div" class="flex gap-3 px-1">
+      <!-- اضافه شدن کلاس scroll-mask -->
+      <div ref="containerRef" class="overflow-x-auto -mx-1 py-4 dir-ltr-scroll snap-x scroll-mask">
+        <TransitionGroup name="hour-fade" tag="div" class="flex gap-4 py-4 px-4">
+          <!-- px-4 اضافه شد تا آیتم اول زیر ماسک نره -->
           <div
             v-for="(h, idx) in hours"
-            :key="h.time"
-            class="hour-card w-28 flex-shrink-0 bg-white rounded-xl p-3 text-center shadow transition-all duration-300"
+            :key="idx"
+            :id="idx === currentVisibleIdx ? 'active-hour-card' : undefined"
+            class="hour-card w-28 flex-shrink-0 bg-white rounded-xl p-3 text-center transition-all duration-300 snap-center"
             :class="{
-              'current-card ring-2 ring-sky-400 ring-offset-2':
-                idx === currentVisibleIdx && ui.selectedDayIndex === 0,
+              'shadow-lg scale-110 bg-sky-50 z-10':
+                idx === currentVisibleIdx && ui.selectedDayIndex === 0 /* استایل جدید زمان حال */,
+              shadow: !(idx === currentVisibleIdx && ui.selectedDayIndex === 0),
+              'opacity-50 grayscale': isTimePast(h.time, currentCityTimeIso),
             }"
           >
             <p
-              class="flex items-center justify-center text-sm font-bold text-gray-500 bg-slate-100 w-2/3 rounded-3xl py-1 mb-2 gap-1 mx-auto"
+              class="flex items-center justify-center text-sm font-bold w-2/3 rounded-3xl py-1 mb-2 gap-1 mx-auto transition-colors"
+              :class="
+                idx === currentVisibleIdx && ui.selectedDayIndex === 0
+                  ? 'bg-sky-200 text-sky-700'
+                  : 'bg-slate-100 text-gray-500'
+              "
             >
               <span class="pt-0.5">{{ formatHourDisplay(h.time) }}</span>
               <ClockIcon class="size-3.5" />
@@ -257,24 +232,39 @@ onMounted(async () => {
   padding-bottom: 0.5rem;
 }
 
-/* اسکرول افقی تمیز */
-.dir-rtl-scroll {
-  direction: rtl; /* مهم: اسکرول بار سمت راست نماند */
+.dir-ltr-scroll {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
 
-/* استایل کارت‌ها */
+/* Mask implementation */
+.scroll-mask {
+  /* ماسک خطی: 5 درصد اول و آخر شفاف میشه */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 5%,
+    black 95%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
 .hour-card {
   display: flex;
   flex-direction: column;
-  min-height: 10rem; /* ارتفاع ثابت برای یکدستی */
+  min-height: 10rem;
+  /* اضافه کردن will-change برای پرفورمنس بهتر انیمیشن اسکیل */
+  will-change: transform;
 }
 .hour-card:hover {
   transform: translateY(-2px);
 }
+/* وقتی کارتی اکتیو هست (اسکیل شده)، هاورش نباید تکون بخوره */
+.hour-card.scale-110:hover {
+  transform: scale(1.1);
+}
 
-/* Custom Scrollbar */
 .hourly-module ::-webkit-scrollbar {
   height: 6px;
 }
@@ -291,7 +281,6 @@ onMounted(async () => {
   background-color: #94a3b8;
 }
 
-/* Animations */
 .hour-fade-enter-active,
 .hour-fade-leave-active {
   transition: all 0.3s ease;

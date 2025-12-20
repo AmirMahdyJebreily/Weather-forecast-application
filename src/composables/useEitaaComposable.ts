@@ -25,8 +25,10 @@ export function useEitaaBackButton(options: UseEitaaBackButtonOptions = {}) {
       return false
     }
 
-    // چک history
-    return window.history.length > 1
+    const res = window.history.state.position > 0
+    console.log(window.history.state.position, res);
+
+    return res
   }
 
   const updateBackButtonVisibility = () => {
