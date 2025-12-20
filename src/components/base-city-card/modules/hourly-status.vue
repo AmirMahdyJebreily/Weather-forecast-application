@@ -93,82 +93,70 @@ function getCurrentCityTimeIso(timezone: string): string {
 }
 
 async function loadHours() {
-  debugger
   loading.value = true
   error.value = null
+
   try {
     const simple = await store.getSimpleForecastForCity(props.city)
-    if (!simple || !simple.hourly || simple.hourly.length === 0) {
-      error.value = 'دادهٔ ساعتی در دسترس نیست'
-      hours.value = []
+
+    // 1. گارد کلاز سریع برای دیتای نامعتبر
+    if (!simple?.hourly?.length) {
+      handleNoData()
       return
     }
 
-    // 1. پیدا کردن تاریخِ روز انتخابی (امروز/فردا/...) به وقت شهر مقصد
-    const targetDateStr = getTargetDateString(props.city.timezone ?? 'UTC', ui.selectedDayIndex)
+    const timezone = props.city.timezone ?? 'UTC'
 
-    // 2. فیلتر کردن نقاطی که تاریخشان با تاریخ هدف یکی است
-    // نکته: p.time در Open-Meteo همیشه لوکال است، پس مستقیم مقایسه می‌کنیم.
-    const filtered = simple.hourly.filter((p) => {
-      const pDateStr = getDateStrFromIso(p.time)
-      console.log(pDateStr, targetDateStr)
+    // 2. محاسبه تاریخ هدف بر اساس ایندکس انتخابی
+    // فرض: تابع کمکی تاریخ دقیق آن روز را برمی‌گرداند (مثلا 2025-12-20)
+    const targetDateStr = getTargetDateString(timezone, ui.selectedDayIndex)
 
-      return pDateStr === targetDateStr
-    })
+    // 3. فیلتر اولیه: جدا کردن تمام ساعات مربوط به آن تاریخ خاص
+    // چون فرمت Open-Meteo ایزو 8601 است، مقایسه رشته‌ای (startsWith) بسیار سریع‌تر از تبدیل به Date است
+    const dayHours = simple.hourly.filter((p) => p.time.startsWith(targetDateStr))
 
-    if (filtered.length === 0) {
-      // اگر برای روزهای آینده دیتا نداشتیم (مثلاً forecast_days=1 بود ولی ui.selectedDayIndex=2 بود)
-      if (ui.selectedDayIndex > 0) {
-        error.value = 'داده برای این روز موجود نیست'
+    if (dayHours.length === 0) {
+      handleNoData()
+      return
+    }
+
+    // 4. منطق نمایش برای "امروز" vs "روزهای دیگر"
+    if (ui.selectedDayIndex === 0) {
+      // دریافت زمان حال شهر مقصد به فرمت ایزو (مثلا 2025-12-20T14:00)
+      const currentCityIso = getCurrentCityTimeIso(timezone)
+
+      // فقط ساعاتی را نگه دار که بزرگتر یا مساوی ساعت فعلی باشند
+      // (حذف ساعات گذشته بجای چرخاندن آن‌ها به ته لیست)
+      hours.value = dayHours.filter((p) => p.time >= currentCityIso)
+
+      // اگر روز تمام شده باشد (ساعت 23:59 گذشته باشد)
+      if (hours.value.length === 0) {
+        error.value = 'ساعات امروز به پایان رسیده است'
       } else {
-        error.value = 'دادهٔ ساعتی یافت نشد'
+        // اولین آیتم (ساعت فعلی) را هایلایت کن
+        currentVisibleIdx.value = 0
       }
-      hours.value = []
-      currentVisibleIdx.value = null
     } else {
-      // 3. مرتب‌سازی یا چرخش لیست
-      // اگر روز "امروز" (selectedDayIndex === 0) باشد، می‌خواهیم از ساعت فعلی شروع شود.
-      // اگر روزهای آینده باشد، از ساعت 00:00 شروع شود (که پیش‌فرض مرتب است).
-
-      if (ui.selectedDayIndex === 0) {
-        const currentCityIso = getCurrentCityTimeIso(props.city.timezone ?? 'UTC')
-
-        // پیدا کردن اندیس ساعت فعلی در لیست فیلتر شده
-        const exactIdx = filtered.findIndex((p) => p.time === currentCityIso)
-
-        if (exactIdx >= 0) {
-          // چرخش: ساعت فعلی بیاید اول لیست
-          // برش از فعلی تا آخر + برش از اول تا قبل از فعلی
-          hours.value = filtered.slice(exactIdx).concat(filtered.slice(0, exactIdx))
-          currentVisibleIdx.value = 0 // کارت اول، هایلایت شود
-        } else {
-          // اگر ساعت دقیق پیدا نشد (مثلاً ساعت فعلی از لیست رد شده یا هنوز نرسیده)،
-          // نزدیک‌ترین ساعت آینده را پیدا می‌کنیم
-          const currentHour = getHourFromIso(currentCityIso)
-          const nextIdx = filtered.findIndex((p) => getHourFromIso(p.time) > currentHour)
-
-          if (nextIdx >= 0) {
-            hours.value = filtered.slice(nextIdx).concat(filtered.slice(0, nextIdx))
-            currentVisibleIdx.value = 0
-          } else {
-            // اگر همه ساعات گذشته‌اند (آخر شب)، همان لیست را نشان بده
-            hours.value = filtered
-            currentVisibleIdx.value = null
-          }
-        }
-      } else {
-        // برای روزهای دیگر، ترتیب معمولی (۰۰:۰۰ تا ۲۳:۰۰)
-        hours.value = filtered
-        currentVisibleIdx.value = null // هیچ کارتی به عنوان "الان" هایلایت نشود
-      }
+      // برای روزهای آینده، کل بازه 00:00 تا 23:00
+      hours.value = dayHours
+      currentVisibleIdx.value = null
     }
   } catch (e) {
-    console.error(e)
+    console.error('Forecast Error:', e)
     error.value = 'خطا در پردازش داده‌ها'
     hours.value = []
   } finally {
     loading.value = false
   }
+}
+
+// یک تابع کمکی کوچک برای تمیز کردن کد اصلی
+function handleNoData() {
+  hours.value = []
+  currentVisibleIdx.value = null
+  // پیام دقیق‌تر بر اساس ایندکس
+  error.value =
+    ui.selectedDayIndex > 0 ? 'داده برای این روز موجود نیست' : 'دادهٔ ساعتی در دسترس نیست'
 }
 
 // Watch for prop/store changes to reload
